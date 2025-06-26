@@ -1,0 +1,237 @@
+{
+  "department": {
+    "Back Office": {
+      "ja": "バックオフィス",
+      "en": "Back Office",
+      "vi": "Văn phòng"
+    },
+    "BUD": {
+      "ja": "BUD",
+      "en": "BUD",
+      "vi": "BUD"
+    },
+    "COMO": {
+      "ja": "COMO",
+      "en": "COMO",
+      "vi": "COMO"
+    },
+    "CREEK&RIVER": {
+      "ja": "CREEK&RIVER",
+      "en": "CREEK&RIVER",
+      "vi": "CREEK&RIVER"
+    },
+    "KIRI": {
+      "ja": "KIRI",
+      "en": "KIRI",
+      "vi": "KIRI"
+    },
+    "YORK": {
+      "ja": "YORK",
+      "en": "YORK",
+      "vi": "YORK"
+    },
+    "SCOPE": {
+      "ja": "SCOPE",
+      "en": "SCOPE",
+      "vi": "SCOPE"
+    }
+  },
+  "status": {
+    "active": {
+      "ja": "有効",
+      "en": "Active",
+      "vi": "Hoạt động"
+    },
+    "inactive": {
+      "ja": "無効",
+      "en": "Inactive",
+      "vi": "Không hoạt động"
+    },
+    "assigned": {
+      "ja": "割り当て済み",
+      "en": "Assigned",
+      "vi": "Đã cấp phát"
+    },
+    "returned": {
+      "ja": "返却済み",
+      "en": "Returned",
+      "vi": "Đã trả"
+    }
+  },
+  "asset_type": {
+    "Laptop": {
+      "ja": "ノートパソコン",
+      "en": "Laptop",
+      "vi": "Laptop"
+    },
+    "Máy in": {
+      "ja": "プリンター",
+      "en": "Printer",
+      "vi": "Máy in"
+    },
+    "Máy chiếu": {
+      "ja": "プロジェクター",
+      "en": "Projector",
+      "vi": "Máy chiếu"
+    },
+    "Điện thoại": {
+      "ja": "携帯電話",
+      "en": "Phone",
+      "vi": "Điện thoại"
+    },
+    "Màn hình": {
+      "ja": "モニター",
+      "en": "Monitor",
+      "vi": "Màn hình"
+    },
+    "Bàn phím": {
+      "ja": "キーボード",
+      "en": "Keyboard",
+      "vi": "Bàn phím"
+    },
+    "Chuột": {
+      "ja": "マウス",
+      "en": "Mouse",
+      "vi": "Chuột"
+    },
+    "Tai nghe": {
+      "ja": "ヘッドセット",
+      "en": "Headset",
+      "vi": "Tai nghe"
+    },
+    "Camera": {
+      "ja": "カメラ",
+      "en": "Camera",
+      "vi": "Camera"
+    },
+    "UPS": {
+      "ja": "無停電電源装置",
+      "en": "UPS",
+      "vi": "UPS"
+    },
+    "PC": {
+      "ja": "パソコン",
+      "en": "PC",
+      "vi": "Cây máy tính"
+    },
+    "Bảng vẽ điện tử": {
+      "ja": "ペンタブレット",
+      "en": "Pen Tablet",
+      "vi": "Bảng vẽ điện tử"
+    },
+    "Ổ cắm điện": {
+      "ja": "電源タップ",
+      "en": "Power Strip",
+      "vi": "Ổ cắm điện"
+    },
+    "Bàn ghế": {
+      "ja": "デスク",
+      "en": "Desk",
+      "vi": "Bàn ghế"
+    },
+    "Bàn làm việc": {
+      "ja": "デスク",
+      "en": "Desk",
+      "vi": "Bàn làm việc"
+    }
+  },
+  "messages": {
+    "Employee added successfully": {
+      "ja": "従業員が正常に追加されました",
+      "en": "Employee added successfully",
+      "vi": "Thêm nhân viên thành công"
+    },
+    "Asset deleted": {
+      "ja": "資産が削除されました",
+      "en": "Asset deleted",
+      "vi": "Đã xóa tài sản"
+    },
+    "Cannot delete department that is in use by active employees": {
+      "ja": "アクティブな従業員が所属している部署は削除できません。",
+      "en": "Cannot delete department that is in use by active employees",
+      "vi": "Không thể xóa phòng ban đang có nhân viên hoạt động"
+    },
+    "Department deleted successfully": {
+      "ja": "部署が正常に削除されました。",
+      "en": "Department deleted successfully",
+      "vi": "Đã xóa phòng ban thành công"
+    },
+    "Asset type deleted successfully": {
+      "ja": "資産タイプが正常に削除されました。",
+      "en": "Asset type deleted successfully",
+      "vi": "Đã xóa loại tài sản thành công"
+    },
+    "Asset type added successfully": {
+      "ja": "資産タイプが正常に追加されました。",
+      "en": "Asset type added successfully",
+      "vi": "Đã thêm loại tài sản thành công"
+    },
+    "Department added successfully": {
+      "ja": "部署が正常に追加されました。",
+      "en": "Department added successfully",
+      "vi": "Đã thêm phòng ban thành công"
+    },
+    "Department updated successfully": {
+      "ja": "部署情報が正常に更新されました。",
+      "en": "Department updated successfully",
+      "vi": "Cập nhật phòng ban thành công"
+    },
+    "Asset type updated successfully": {
+      "ja": "資産タイプ情報が正常に更新されました。",
+      "en": "Asset type updated successfully",
+      "vi": "Cập nhật loại tài sản thành công"
+    }
+  },
+  "asset_name": {
+    "Máy in VN 15": {
+      "ja": "プリンター 15",
+      "en": "Printer 15",
+      "vi": "Máy in VN 15"
+    },
+    "Monitor VN 14": {
+      "ja": "モニター 14",
+      "en": "Monitor 14",
+      "vi": "Monitor VN 14"
+    },
+    "Phone VN 13": {
+      "ja": "電話 13",
+      "en": "Phone 13",
+      "vi": "Phone VN 13"
+    },
+    "Monitor VN 12": {
+      "ja": "モニター 12",
+      "en": "Monitor 12",
+      "vi": "Monitor VN 12"
+    },
+    "Máy chiếu VN 11": {
+      "ja": "プロジェクター 11",
+      "en": "Projector 11",
+      "vi": "Máy chiếu VN 11"
+    },
+    "Máy chiếu VN 10": {
+      "ja": "プロジェクター 10",
+      "en": "Projector 10",
+      "vi": "Máy chiếu VN 10"
+    },
+    "Laptop VN 9": {
+      "ja": "ノートパソコン 9",
+      "en": "Laptop 9",
+      "vi": "Laptop VN 9"
+    },
+    "Monitor VN 8": {
+      "ja": "モニター 8",
+      "en": "Monitor 8",
+      "vi": "Monitor VN 8"
+    },
+    "Tablet VN 7": {
+      "ja": "タブレット 7",
+      "en": "Tablet 7",
+      "vi": "Tablet VN 7"
+    },
+    "Tablet VN 6": {
+      "ja": "タブレット 6",
+      "en": "Tablet 6",
+      "vi": "Tablet VN 6"
+    }
+  }
+}

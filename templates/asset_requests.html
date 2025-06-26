@@ -1,0 +1,637 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Notification area -->
+    <div id="notification" class="alert d-none mb-3" role="alert"></div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">{{ _('Asset Requests') }}</h2>
+        <div class="d-flex gap-2">
+            <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="{{ _('Search requests...') }}" style="min-width:200px;">
+            <button class="btn btn-sm btn-primary px-4" id="refreshBtn">
+                <i class="fas fa-sync-alt me-2"></i><span class="fw-bold">{{ _('Refresh') }}</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Status Tabs -->
+    <div class="card mb-4">
+        <div class="card-header bg-transparent">
+            <ul class="nav nav-tabs card-header-tabs status-filter-group" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" data-status="pending" type="button">
+                        <i class="fas fa-hourglass-half me-2"></i> {{ _('Pending') }} 
+                        <span id="pending-count" class="badge rounded-pill ms-1">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-status="approved" type="button">
+                        <i class="fas fa-check-circle me-2"></i> {{ _('Approved') }}
+                        <span id="approved-count" class="badge rounded-pill ms-1">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-status="rejected" type="button">
+                        <i class="fas fa-times-circle me-2"></i> {{ _('Rejected') }}
+                        <span id="rejected-count" class="badge rounded-pill ms-1">0</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body p-0">
+            <!-- Pending Requests Section -->
+            <div id="pending-section" class="request-section p-4">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>リクエストID</th>
+                                <th>社員コード</th>
+                                <th>従業員</th>
+                                <th>資産</th>
+                                <th>申請日</th>
+                                <th>ステータス</th>
+                                <th>メモ</th>
+                                <th id="pendingActionHeader">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingTable"></tbody>
+                    </table>
+                    <div id="pendingEmpty" class="text-center py-5 d-none">
+                        <div class="mb-3">
+                            <i class="fas fa-inbox fa-3x text-muted"></i>
+                        </div>
+                        <h5 class="text-muted">{{ _('No Pending Requests') }}</h5>
+                        <p class="text-muted">{{ _('There are no pending asset requests to display.') }}</p>
+                    </div>
+                    <div id="pendingLoading" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">{{ _('Loading...') }}</span>
+                        </div>
+                        <p class="mt-2">{{ _('Loading requests...') }}</p>
+                    </div>
+                </div>
+                <!-- Pagination Controls for Pending -->
+                <nav aria-label="{{ _('Pending Page navigation') }}">
+                    <ul id="pendingPaginationControls" class="pagination justify-content-center mt-3"></ul>
+                </nav>
+            </div>
+
+            <!-- Approved Requests Section -->
+            <div id="approved-section" class="request-section d-none p-4">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>リクエストID</th>
+                                <th>社員コード</th>
+                                <th>従業員</th>
+                                <th>資産</th>
+                                <th>申請日</th>
+                                <th>承認日</th>
+                                <th>ステータス</th>
+                                <th>メモ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approvedTable"></tbody>
+                    </table>
+                    <div id="approvedEmpty" class="text-center py-5 d-none">
+                        <div class="mb-3">
+                            <i class="fas fa-check-circle fa-3x text-muted"></i>
+                        </div>
+                        <h5 class="text-muted">{{ _('No Approved Requests') }}</h5>
+                        <p class="text-muted">{{ _('There are no approved asset requests to display.') }}</p>
+                    </div>
+                    <div id="approvedLoading" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">{{ _('Loading...') }}</span>
+                        </div>
+                        <p class="mt-2">{{ _('Loading requests...') }}</p>
+                    </div>
+                </div>
+                <!-- Pagination Controls for Approved -->
+                <nav aria-label="{{ _('Approved Page navigation') }}">
+                    <ul id="approvedPaginationControls" class="pagination justify-content-center mt-3"></ul>
+                </nav>
+            </div>
+
+            <!-- Rejected Requests Section -->
+            <div id="rejected-section" class="request-section d-none p-4">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>リクエストID</th>
+                                <th>社員コード</th>
+                                <th>従業員</th>
+                                <th>資産</th>
+                                <th>申請日</th>
+                                <th>拒否日</th>
+                                <th>ステータス</th>
+                                <th>メモ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rejectedTable"></tbody>
+                    </table>
+                    <div id="rejectedEmpty" class="text-center py-5 d-none">
+                        <div class="mb-3">
+                            <i class="fas fa-times-circle fa-3x text-muted"></i>
+                        </div>
+                        <h5 class="text-muted">{{ _('No Rejected Requests') }}</h5>
+                        <p class="text-muted">{{ _('There are no rejected asset requests to display.') }}</p>
+                    </div>
+                    <div id="rejectedLoading" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">{{ _('Loading...') }}</span>
+                        </div>
+                        <p class="mt-2">{{ _('Loading requests...') }}</p>
+                    </div>
+                </div>
+                <!-- Pagination Controls for Rejected -->
+                <nav aria-label="{{ _('Rejected Page navigation') }}">
+                    <ul id="rejectedPaginationControls" class="pagination justify-content-center mt-3"></ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden CSRF token for API calls -->
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+<style>
+/* Tối ưu nút Approve khi disable */
+.approve-btn.bg-dark[disabled], .approve-btn.bg-dark.disabled {
+    opacity: 0.7;
+    pointer-events: none;
+    box-shadow: none;
+    outline: none;
+}
+.approve-btn.bg-dark[disabled] i, .approve-btn.bg-dark.disabled i {
+    color: #bbb !important;
+}
+.table th { background: #E8F5E9 !important; color: #388E3C !important; border: none !important; font-weight: 700; }
+.table tbody tr:hover { background: #f3f6fd; }
+.btn { border-radius: 12px; font-weight: 600; min-width: 80px; }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Function to show notifications
+function showNotification(message, type) {
+    const notification = $('#notification');
+    notification.text(message);
+    notification.removeClass('d-none alert-success alert-danger alert-warning alert-info');
+    notification.addClass('alert-' + type);
+    notification.fadeIn();
+    
+    // Hide notification after 5 seconds
+    setTimeout(function() {
+        notification.fadeOut(500, function() {
+            notification.addClass('d-none');
+        });
+    }, 5000);
+}
+
+// Store current page for each status tab
+const currentPage = {
+    pending: 1,
+    approved: 1,
+    rejected: 1
+};
+
+// Store items per page (can make this user configurable later)
+const itemsPerPage = 10;
+
+function showSection(status, button = null) {
+    // Hide all sections
+    document.querySelectorAll('.request-section').forEach(section => {
+        section.classList.add('d-none');
+    });
+    
+    // Show target section
+    const targetSection = document.getElementById(`${status}-section`);
+    if (targetSection) {
+        targetSection.classList.remove('d-none');
+    }
+    
+    // Update active tab
+    document.querySelectorAll('.status-filter-group .nav-link').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    if (button) {
+        button.classList.add('active');
+    } else {
+        const targetButton = document.querySelector(`.status-filter-group .nav-link[data-status="${status}"]`);
+        if (targetButton) {
+            targetButton.classList.add('active');
+        }
+    }
+    
+    // Load requests for the current page of the activated tab
+    loadRequests(status, currentPage[status], itemsPerPage);
+}
+
+function updateCountBadge(status, count) {
+    const badge = document.getElementById(`${status}-count`);
+    if (badge) {
+        badge.textContent = count;
+        badge.className = 'badge rounded-pill ms-1';
+        
+        // Apply different styling based on branch
+        const branch = document.body.className.includes('branch-vietnam') ? 'vietnam' : 'japan';
+        
+        if (count > 0) {
+            if (status === 'pending') {
+                if (branch === 'vietnam') {
+                    badge.classList.add('bg-success', 'text-white');
+                } else {
+                    badge.classList.add('bg-danger', 'text-white');
+                }
+            } else if (status === 'approved') {
+                badge.classList.add('bg-success', 'text-white');
+            } else if (status === 'rejected') {
+                badge.classList.add('bg-danger', 'text-white');
+            }
+        } else {
+            badge.classList.add('bg-secondary', 'text-white');
+        }
+    }
+}
+
+function loadRequests(status = 'pending', page = 1, perPage = 10) {
+    // Show loading indicator
+    $(`#${status}Loading`).removeClass('d-none');
+    $(`#${status}Empty`).addClass('d-none').html('<div class="mb-3"><i class="fas fa-inbox fa-3x text-muted"></i></div><h5 class="text-muted">Loading requests...</h5>'); // Reset empty message and show loading text
+    $(`#${status}Table`).empty();
+    $(`#${status}PaginationControls`).empty(); // Clear pagination controls on load
+    
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    const searchKeyword = document.getElementById('searchInput').value.trim(); // Get search keyword
+
+    // Construct API URL with parameters
+    let apiUrl = `/api/asset-requests?status=${status}&page=${page}&per_page=${perPage}`;
+    if (searchKeyword) {
+        apiUrl += `&search_query=${encodeURIComponent(searchKeyword)}`; // Add search query if exists
+    }
+
+    fetch(apiUrl, {
+        headers: {
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            // Attempt to read JSON error response
+            return response.json().then(errorData => {
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Hide loading indicator
+        $(`#${status}Loading`).addClass('d-none');
+        
+        if (data.success) {
+            const tableBody = document.getElementById(`${status}Table`);
+            const emptyDiv = document.getElementById(`${status}Empty`);
+            
+            if (!tableBody || !emptyDiv) {
+                console.error(`Elements not found for status: ${status}`);
+                return;
+            }
+            
+            tableBody.innerHTML = ''; // Clear previous data
+            updateCountBadge(status, data.total);
+            
+            if (data.requests && data.requests.length > 0) {
+                emptyDiv.classList.add('d-none');
+                
+                // Ensure the table body is empty before adding new rows
+                $(tableBody).empty();
+
+                data.requests.forEach(request => {
+                    const row = $('<tr>');
+                    row.append($('<td>').text(request.id));
+                    row.append($('<td>').text(request.employee_code || ''));
+                    row.append($('<td>').text(request.employee_name || ''));
+                    row.append($('<td>').text(request.asset_name || ''));
+                    row.append($('<td>').text(request.request_date || ''));
+                    if (status === 'approved') {
+                        row.append($('<td>').text(request.approval_date || ''));
+                    }
+                    if (status === 'rejected') {
+                        row.append($('<td>').text(request.approval_date || ''));
+                    }
+                    row.append($('<td>').text(translateStatus(request.status) || ''));
+                    row.append($('<td>').text(request.notes || ''));
+                    if (status === 'pending') {
+                        const actionsCell = $('<td class="text-center"></td>');
+                        const approveBtn = $('<button class="btn btn-success btn-sm me-2 approve-btn" data-id="' + request.id + '"><i class="fas fa-check"></i> 承認</button>');
+                        const rejectBtn = $('<button class="btn btn-danger btn-sm reject-btn" data-id="' + request.id + '"><i class="fas fa-times"></i> 拒否</button>');
+                        if (request.asset_available_quantity <= 0) {
+                            approveBtn.prop('disabled', true);
+                        }
+                        actionsCell.append(approveBtn);
+                        actionsCell.append(rejectBtn);
+                        row.append(actionsCell);
+                    }
+                    $(tableBody).append(row);
+                });
+                
+                // Generate pagination controls for this tab
+                // Pass searchKeyword to the pagination generation function as well
+                generatePagination(status, data.total, data.page, data.per_page, data.pages, searchKeyword);
+
+            } else {
+                // Show empty message
+                $(`#${status}Empty`).removeClass('d-none').html(
+                  '<div class="mb-3"><i class="fas fa-inbox fa-3x text-muted"></i></div>' +
+                  `<h5 class="text-muted">${translations[status].title}</h5>` +
+                  `<p class="text-muted">${translations[status].desc}</p>`
+                );
+            }
+        } else {
+            // Show error message from API response
+            showNotification(`Error loading ${status} requests: ${data.message || 'Unknown error'}`, 'danger');
+             $(`#${status}Empty`).removeClass('d-none').html('<div class="mb-3"><i class="fas fa-exclamation-circle fa-3x text-danger"></i></div><h5 class="text-muted">Error loading requests</h5><p class="text-muted">' + (data.message || 'Unknown error') + '</p>'); // Display error in empty message area
+        }
+    })
+    .catch(error => {
+        // Hide loading indicator
+        $(`#${status}Loading`).addClass('d-none');
+        // Show generic error message
+        showNotification('An error occurred while fetching requests.', 'danger');
+         $(`#${status}Empty`).removeClass('d-none').html('<div class="mb-3"><i class="fas fa-exclamation-circle fa-3x text-danger"></i></div><h5 class="text-muted">Error loading requests</h5><p class="text-muted">An error occurred while fetching requests.</p>'); // Display error in empty message area
+        console.error(`Error fetching ${status} requests:`, error);
+    });
+}
+
+// Function to generate and display pagination controls for a specific tab
+// Add searchKeyword parameter
+function generatePagination(status, total, currentPage, perPage, totalPages, searchKeyword = '') {
+    const paginationContainer = $(`#${status}PaginationControls`);
+    paginationContainer.empty(); // Clear previous pagination
+
+    if (totalPages <= 1) {
+        return; // No need for pagination if only one page
+    }
+
+    const ul = $('<ul class="pagination justify-content-center"></ul>');
+
+    // Previous button
+    ul.append(`
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage - 1}" data-status="${status}" data-search="${encodeURIComponent(searchKeyword)}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+    `);
+
+    // Page numbers
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, currentPage + 2);
+
+    const displayPages = 5;
+    if (endPage - startPage + 1 < displayPages) {
+        if (currentPage <= Math.ceil(displayPages / 2)) {
+            endPage = Math.min(totalPages, displayPages);
+        } else if (currentPage > totalPages - Math.floor(displayPages / 2)) {
+            startPage = Math.max(1, totalPages - displayPages + 1);
+        }
+    }
+
+     // Add first page and ellipsis if needed
+     if (startPage > 1) {
+        ul.append(`
+            <li class="page-item">
+                <a class="page-link" href="#" data-page="1" data-status="${status}" data-search="${encodeURIComponent(searchKeyword)}">1</a>
+            </li>
+        `);
+        if (startPage > 2) {
+            ul.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        ul.append(`
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" data-page="${i}" data-status="${status}" data-search="${encodeURIComponent(searchKeyword)}">${i}</a>
+            </li>
+        `);
+    }
+
+     // Add last page and ellipsis if needed
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            ul.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
+        }
+        ul.append(`
+            <li class="page-item">
+                <a class="page-link" href="#" data-page="${totalPages}" data-status="${status}" data-search="${encodeURIComponent(searchKeyword)}">${totalPages}</a>
+            </li>
+        `);
+    }
+
+    // Next button
+    ul.append(`
+        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage + 1}" data-status="${status}" data-search="${encodeURIComponent(searchKeyword)}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    `);
+
+    paginationContainer.append(ul);
+
+    // Attach click handlers to pagination links
+    paginationContainer.find('.page-link').on('click', function(e) {
+        e.preventDefault(); // Prevent default link behavior
+        const newPage = $(this).data('page');
+        const requestStatus = $(this).data('status');
+        const search = $(this).data('search') || ''; // Get search keyword from data attribute
+        const totalPages = Math.ceil(total / perPage); // Recalculate total pages based on arguments
+
+        if (newPage > 0 && newPage <= totalPages && newPage !== currentPage[requestStatus]) {
+            // Update current page for the specific status tab
+            currentPage[requestStatus] = newPage;
+            // Pass the search keyword to loadRequests
+            loadRequests(requestStatus, currentPage[requestStatus], perPage);
+        }
+    });
+}
+
+// Event listeners for status tabs
+document.querySelectorAll('.status-filter-group .nav-link').forEach(button => {
+    button.addEventListener('click', function() {
+        const status = this.dataset.status;
+        showSection(status, this);
+    });
+});
+
+// Add event listener for search input
+document.getElementById('searchInput').addEventListener('input', function() {
+    // Reset to first page when search query changes
+    const activeTabButton = document.querySelector('.status-filter-group .nav-link.active');
+    if (activeTabButton) {
+        const activeStatus = activeTabButton.dataset.status;
+        currentPage[activeStatus] = 1; // Reset to page 1 for the active tab
+        loadRequests(activeStatus, currentPage[activeStatus], itemsPerPage); // Load requests with new search query
+    }
+});
+
+// Event listener for Refresh button
+document.getElementById('refreshBtn').addEventListener('click', function() {
+    const activeTabButton = document.querySelector('.status-filter-group .nav-link.active');
+    if (activeTabButton) {
+        const currentStatus = activeTabButton.dataset.status;
+        // When refreshing, use the current search input and current page
+        loadRequests(currentStatus, currentPage[currentStatus], itemsPerPage); 
+    }
+});
+
+// Initial load for the default active tab (Pending)
+document.addEventListener('DOMContentLoaded', function() {
+    showSection('pending');
+});
+
+// Add event listeners for Approve/Reject buttons using event delegation
+$(document).on('click', '.approve-btn', function() {
+    const requestId = $(this).data('id');
+    // Disable buttons to prevent multiple clicks
+    $(this).prop('disabled', true).text('Processing...');
+    $(this).siblings('.reject-btn').prop('disabled', true);
+
+    // Get CSRF token
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+    fetch(`/api/asset-requests/${requestId}/approve`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json' // Specify content type
+        },
+        // Body can be empty for this type of request if ID is in URL
+        body: JSON.stringify({})
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(errorData => {
+                throw new Error(errorData.message || 'Failed to approve request');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            // Refresh the current tab (pending tab after approval) while keeping search and page
+            const activeTabButton = document.querySelector('.status-filter-group .nav-link.active');
+             if (activeTabButton) {
+                const activeStatus = activeTabButton.dataset.status;
+                // Stay on the current page of the active tab
+                loadRequests(activeStatus, currentPage[activeStatus], itemsPerPage);
+                // Also refresh the approved tab's count and first page
+                loadRequests('approved', 1, itemsPerPage); 
+             }
+        } else {
+            showNotification(data.message || 'Failed to approve request', 'danger');
+             // Re-enable buttons on failure
+            $(this).prop('disabled', false).html('<i class="fas fa-check"></i> Approve');
+            $(this).siblings('.reject-btn').prop('disabled', false);
+        }
+    })
+    .catch(error => {
+        showNotification(error.message || 'An error occurred during approval.', 'danger');
+         // Re-enable buttons on failure
+        $(this).prop('disabled', false).html('<i class="fas fa-check"></i> Approve');
+        $(this).siblings('.reject-btn').prop('disabled', false);
+        console.error('Approval Error:', error);
+    });
+});
+
+$(document).on('click', '.reject-btn', function() {
+    const requestId = $(this).data('id');
+    // Disable buttons to prevent multiple clicks
+    $(this).prop('disabled', true).text('Processing...');
+    $(this).siblings('.approve-btn').prop('disabled', true);
+
+    // Get CSRF token
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+     fetch(`/api/asset-requests/${requestId}/reject`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+             'Content-Type': 'application/json' // Specify content type
+        },
+         // Body can be empty for this type of request if ID is in URL
+        body: JSON.stringify({})
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(errorData => {
+                throw new Error(errorData.message || 'Failed to reject request');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            // Refresh the current tab (pending tab after rejection) while keeping search and page
+            const activeTabButton = document.querySelector('.status-filter-group .nav-link.active');
+             if (activeTabButton) {
+                const activeStatus = activeTabButton.dataset.status;
+                // Stay on the current page of the active tab
+                loadRequests(activeStatus, currentPage[activeStatus], itemsPerPage);
+                 // Also refresh the rejected tab's count and first page
+                 loadRequests('rejected', 1, itemsPerPage);
+             }
+        } else {
+            showNotification(data.message || 'Failed to reject request', 'danger');
+            // Re-enable buttons on failure
+            $(this).prop('disabled', false).html('<i class="fas fa-times"></i> Reject');
+            $(this).siblings('.approve-btn').prop('disabled', false);
+        }
+    })
+    .catch(error => {
+        showNotification(error.message || 'An error occurred during rejection.', 'danger');
+        // Re-enable buttons on failure
+        $(this).prop('disabled', false).html('<i class="fas fa-times"></i> Reject');
+        $(this).siblings('.approve-btn').prop('disabled', false);
+        console.error('Rejection Error:', error);
+    });
+});
+
+const translations = {
+  pending: {
+    title: "{{ _('No Pending Requests') }}",
+    desc: "{{ _('There are no pending asset requests to display.') }}"
+  },
+  approved: {
+    title: "{{ _('No Approved Requests') }}",
+    desc: "{{ _('There are no approved asset requests to display.') }}"
+  },
+  rejected: {
+    title: "{{ _('No Rejected Requests') }}",
+    desc: "{{ _('There are no rejected asset requests to display.') }}"
+  }
+};
+
+// Thêm hàm chuyển trạng thái sang tiếng Nhật
+function translateStatus(status) {
+    switch (status) {
+        case 'pending': return '保留中';
+        case 'approved': return '承認済み';
+        case 'rejected': return '拒否済み';
+        default: return status;
+    }
+}
+
+</script>
+{% endblock %}

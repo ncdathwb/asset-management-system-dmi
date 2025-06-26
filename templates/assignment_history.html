@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('資産割当履歴') }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>{{ _('資産割当履歴') }}</h2>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" id="searchInput" placeholder="{{ _('履歴を検索...') }}">
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">すべてのステータス</option>
+                        <option value="assigned">割当済み</option>
+                        <option value="returned">返却済み</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" id="departmentFilter">
+                        <option value="">すべての部署</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="assignedDateStart" class="form-label">割当日の開始</label>
+                    <input type="date" class="form-control" id="assignedDateStart">
+                </div>
+                <div class="col-md-4">
+                    <label for="assignedDateEnd" class="form-label">割当日の終了</label>
+                    <input type="date" class="form-control" id="assignedDateEnd">
+                </div>
+                <div class="col-md-4">
+                    <label for="returnDateStart" class="form-label">返却日の開始</label>
+                    <input type="date" class="form-control" id="returnDateStart">
+                </div>
+                <div class="col-md-4">
+                    <label for="returnDateEnd" class="form-label">返却日の終了</label>
+                    <input type="date" class="form-control" id="returnDateEnd">
+                </div>
+                <div class="col-md-4 d-flex align-items-end justify-content-center d-none">
+                    <button class="btn btn-primary mt-4" onclick="exportHistory()">
+                        <i class="fas fa-download"></i> エクスポート
+                    </button>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <label for="perPageSelect" class="form-label me-2 mb-0">表示件数</label>
+                    <select id="perPageSelect" class="form-select w-auto">
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped" id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>{{ _('日付') }}</th>
+                            <th>{{ _('種類') }}</th>
+                            <th>{{ _('従業員') }}</th>
+                            <th>{{ _('資産') }}</th>
+                            <th>{{ _('ステータス') }}</th>
+                            <th>{{ _('備考') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Data will be loaded via Ajax -->
+                    </tbody>
+                </table>
+            </div>
+            <nav aria-label="Page navigation">
+                <ul id="paginationControls" class="pagination justify-content-center"></ul>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var currentPerPage = 10;
+
+$(document).ready(function() {
+    // Load data when page loads
+    loadAssignmentHistory();
+    loadDepartmentsForFilter();
+
+    // Search functionality
+    $('#searchInput').on('keyup', function() {
+        loadAssignmentHistory();
+    });
+
+    // Status filter
+    $('#statusFilter').change(function() {
+        loadAssignmentHistory();
+    });
+
+    // Department filter
+    $('#departmentFilter').change(function() {
+        loadAssignmentHistory();
+    });
+
+    // Date filters
+    $('#assignedDateStart, #assignedDateEnd, #returnDateStart, #returnDateEnd').change(function() {
+        loadAssignmentHistory();
+    });
+
+    $('#perPageSelect').on('change', function() {
+        currentPerPage = parseInt($(this).val());
+        loadAssignmentHistory(1, currentPerPage);
+    });
+});
+
+function exportHistory() {
+    var status = $('#statusFilter').val();
+    var search_query = $('#searchInput').val();
+    var assigned_date_start = $('#assignedDateStart').val();
+    var assigned_date_end = $('#assignedDateEnd').val();
+    var return_date_start = $('#returnDateStart').val();
+    var return_date_end = $('#returnDateEnd').val();
+    var department = $('#departmentFilter').val();
+
+    var url = '/api/asset-assignment-history/export';
+    var params = [];
+
+    if (status) params.push('status=' + status);
+    if (search_query) params.push('search_query=' + search_query);
+    if (assigned_date_start) params.push('assigned_date_start=' + assigned_date_start);
+    if (assigned_date_end) params.push('assigned_date_end=' + assigned_date_end);
+    if (return_date_start) params.push('return_date_start=' + return_date_start);
+    if (return_date_end) params.push('return_date_end=' + return_date_end);
+    if (department) params.push('department=' + department);
+
+    if (params.length > 0) {
+        url += '?' + params.join('&');
+    }
+
+    window.location.href = url;
+}
+
+function loadDepartmentsForFilter() {
+    $.ajax({
+        url: '/api/settings/departments',
+        method: 'GET',
+        success: function(response) {
+            const departmentFilter = $('#departmentFilter');
+            if (response.success && response.departments) {
+                response.departments.forEach(function(dept) {
+                    departmentFilter.append($('<option>').val(dept.name).text(dept.name));
+                });
+            }
+        },
+        error: function() {
+            console.error('部署の読み込み中にエラーが発生しました。');
+        }
+    });
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).replace(/\//g, '-');
+}
+
+function translateStatus(status) {
+    const statusMap = {
+        'assigned': '割当済み',
+        'returned': '返却済み'
+    };
+    return statusMap[status] || status;
+}
+
+function loadAssignmentHistory(page = 1, per_page) {
+    if (!per_page) per_page = currentPerPage;
+    var status = $('#statusFilter').val();
+    var search_query = $('#searchInput').val();
+    var assigned_date_start = $('#assignedDateStart').val();
+    var assigned_date_end = $('#assignedDateEnd').val();
+    var return_date_start = $('#returnDateStart').val();
+    var return_date_end = $('#returnDateEnd').val();
+    var department = $('#departmentFilter').val();
+
+    var url = '/api/asset-assignment-history';
+    var params = {
+        page: page,
+        per_page: per_page
+    };
+
+    if (status) params.status = status;
+    if (search_query) params.search_query = search_query;
+    if (assigned_date_start) params.assigned_date_start = assigned_date_start;
+    if (assigned_date_end) params.assigned_date_end = assigned_date_end;
+    if (return_date_start) params.return_date_start = return_date_start;
+    if (return_date_end) params.return_date_end = return_date_end;
+    if (department) params.department = department;
+
+    url += '?' + $.param(params);
+
+    $.ajax({
+        url: url,
+        method: 'GET',
+        success: function(response) {
+            var tableBody = $('#historyTable tbody');
+            tableBody.empty();
+
+            if (response.success && response.history.length > 0) {
+                response.history.forEach(function(item) {
+                    var row = $('<tr>');
+                    var date = item.assigned_date || item.return_date;
+                    var type = item.status === 'assigned' ? '割当' : '返却';
+                    var status = item.status === 'assigned' ? '割当済み' : '返却済み';
+                    
+                    row.append($('<td>').text(formatDate(date)));
+                    row.append($('<td>').text(type));
+                    row.append($('<td>').text(item.employee_name + ' (' + item.employee_code + ')'));
+                    row.append($('<td>').text(item.asset_name + ' (' + item.asset_code + ')'));
+                    row.append($('<td>').text(status));
+                    
+                    var notes = '';
+                    if (item.status === 'assigned') {
+                        notes = item.notes || 'なし';
+                    } else {
+                        notes = item.reclaim_reason || item.notes || 'なし';
+                    }
+                    row.append($('<td>').text(notes));
+                    
+                    row.addClass(item.status === 'assigned' ? 'table-primary' : 'table-success');
+                    
+                    tableBody.append(row);
+                });
+
+                generatePagination(response.total, response.page, response.per_page, response.pages);
+
+            } else if (response.success && response.history.length === 0) {
+                var emptyRow = $('<tr>').append($('<td colspan="12" class="text-center">'+ '選択したフィルターに一致する履歴が見つかりません。' +'</td>'));
+                tableBody.append(emptyRow);
+                $('#paginationControls').empty();
+
+            } else {
+                var errorRow = $('<tr>').append($('<td colspan="12" class="text-center text-danger">'+ '履歴の読み込み中にエラーが発生しました: ' + (response.message || '不明なエラー') + '</td>'));
+                tableBody.append(errorRow);
+                $('#paginationControls').empty();
+            }
+        },
+        error: function(xhr, status, error) {
+            var tableBody = $('#historyTable tbody');
+            tableBody.empty();
+            var errorRow = $('<tr>').append($('<td colspan="12" class="text-center text-danger">'+ '履歴の取得中にエラーが発生しました。' +'</td>'));
+            tableBody.append(errorRow);
+            $('#paginationControls').empty();
+            console.error("Error fetching assignment history:", xhr.responseText);
+        }
+    });
+}
+
+function generatePagination(total, currentPage, perPage, totalPages) {
+    const paginationContainer = $('#paginationControls');
+    paginationContainer.empty(); // Clear previous pagination
+
+    if (totalPages <= 1) {
+        return; // No need for pagination if only one page
+    }
+
+    const ul = $('<ul class="pagination justify-content-center"></ul>');
+
+    // Previous button
+    ul.append(`
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+    `);
+
+    // Page numbers
+    // Display a limited range of pages around the current page
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, currentPage + 2);
+
+    // Adjust start and end to always show a fixed number of pages if possible (e.g., 5 pages)
+    const displayPages = 5; // Number of pages to display in the pagination control
+    if (endPage - startPage + 1 < displayPages) {
+        if (currentPage <= Math.ceil(displayPages / 2)) {
+            endPage = Math.min(totalPages, displayPages);
+        } else if (currentPage > totalPages - Math.floor(displayPages / 2)) {
+            startPage = Math.max(1, totalPages - displayPages + 1);
+        }
+    }
+
+    // Add first page and ellipsis if needed
+    if (startPage > 1) {
+        ul.append(`
+            <li class="page-item">
+                <a class="page-link" href="#" data-page="1">1</a>
+            </li>
+        `);
+        if (startPage > 2) {
+            ul.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        ul.append(`
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" data-page="${i}">${i}</a>
+            </li>
+        `);
+    }
+
+    // Add last page and ellipsis if needed
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            ul.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
+        }
+        ul.append(`
+            <li class="page-item">
+                <a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a>
+            </li>
+        `);
+    }
+
+    // Next button
+    ul.append(`
+        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    `);
+
+    paginationContainer.append(ul);
+
+    // Attach click handlers to pagination links
+    paginationContainer.find('.page-link').on('click', function(e) {
+        e.preventDefault(); // Prevent default link behavior
+        const newPage = $(this).data('page');
+        if (newPage > 0 && newPage <= totalPages && newPage !== currentPage) {
+            loadAssignmentHistory(newPage, perPage);
+        }
+    });
+}
+
+</script>
+{% endblock %}
+
+{% block styles %}
+{% endblock %}

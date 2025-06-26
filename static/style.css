@@ -1,0 +1,475 @@
+/* ====== DMI Asset Management System - Global Styles ====== */
+:root {
+    /* Vietnam branch */
+    --vietnam-primary: #da251c;
+    --vietnam-secondary: #ffcd00;
+    /* Japan branch */
+    --japan-primary: #bc002d;
+    --japan-secondary: #00247d;
+    /* Common */
+    --main-bg: #f8fafc;
+    --card-bg: #fff;
+    --shadow: 0 4px 16px rgba(0,0,0,0.08);
+    --shadow-hover: 0 8px 32px rgba(0,0,0,0.12);
+    --radius: 14px;
+    --transition: 0.3s cubic-bezier(.4,2,.6,1);
+    --font-main: 'Segoe UI', 'Roboto', Arial, sans-serif;
+    --text-dark: #1e293b;
+    --text-gray: #64748b;
+    --input-bg: #f1f5f9;
+    --input-border: #e2e8f0;
+    --input-focus: #4dabf7;
+}
+body {
+    min-height: 100vh;
+    background: #F5F5F5;
+    color: #222;
+    font-family: 'Poppins', 'Segoe UI', 'Roboto', Arial, sans-serif !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 20px 0;
+    /* Ngăn người dùng bôi đen nội dung */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+/* Cho phép bôi đen trong các trường input và textarea */
+input, textarea {
+    -webkit-user-select: auto;
+    -moz-user-select: auto;
+    -ms-user-select: auto;
+    user-select: auto;
+}
+.card, .modal-content {
+    border-radius: 24px !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12), 0 5px 15px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255,255,255,0.08) inset !important;
+    background: rgba(255,255,255,0.97) !important;
+    backdrop-filter: blur(6px);
+    padding: 24px 32px;
+}
+.card:hover, .modal-content:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px) scale(1.01);
+}
+.card-header, .modal-header {
+    background: linear-gradient(90deg, #6e8efb 60%, #a777e3 100%) !important;
+    color: #fff !important;
+    border-radius: 24px 24px 0 0 !important;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.3rem;
+    letter-spacing: 1px;
+    box-shadow: 0 2px 8px rgba(110, 142, 251, 0.08);
+    padding: 20px 0 10px 0;
+}
+.btn, .btn-primary, .btn-outline-secondary, .btn-outline-primary, .btn-outline-success, .btn-outline-danger {
+    border-radius: 14px !important;
+    font-weight: 600 !important;
+    font-family: 'Poppins', Arial, sans-serif;
+    font-size: 1.08rem;
+    padding: 12px 28px !important;
+    box-shadow: 0 4px 12px rgba(110, 142, 251, 0.13);
+    background: #4CAF50 !important;
+    color: #fff !important;
+    border: none !important;
+    transition: all 0.3s;
+}
+.btn:hover, .btn-primary:hover, .btn-outline-secondary:hover, .btn-outline-primary:hover, .btn-outline-success:hover, .btn-outline-danger:hover {
+    background: #43A047 !important;
+    color: #fff !important;
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 6px 20px rgba(110, 142, 251, 0.18);
+}
+.btn-vietnam {
+    background: linear-gradient(90deg, var(--vietnam-primary), var(--vietnam-secondary));
+    color: #fff;
+    border: none;
+}
+.btn-vietnam:hover {
+    background: linear-gradient(90deg, #b71c1c, #ffd600);
+}
+.btn-japan {
+    background: linear-gradient(90deg, var(--japan-primary), var(--japan-secondary));
+    color: #fff;
+    border: none;
+}
+.btn-japan:hover {
+    background: linear-gradient(90deg, #900020, #003366);
+}
+.table thead th {
+    background: #E8F5E9 !important;
+    color: #388E3C !important;
+    border: none !important;
+    font-weight: 700;
+}
+.branch-japan .table thead th {
+    background: linear-gradient(90deg, var(--japan-primary), var(--japan-secondary));
+}
+input.form-control, select.form-select, textarea.form-control {
+    border-radius: 14px !important;
+    background: #fff !important;
+    border: 1px solid #BDBDBD !important;
+    font-size: 1rem;
+    font-family: 'Poppins', Arial, sans-serif;
+    padding: 12px 18px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    transition: border 0.3s, box-shadow 0.3s;
+    color: #222;
+}
+input.form-control:focus, select.form-select:focus, textarea.form-control:focus {
+    border-color: #6e8efb !important;
+    box-shadow: 0 0 0 2px #a777e3;
+    background: #fff !important;
+}
+.table-responsive {
+    border-radius: var(--radius);
+    overflow: auto;
+}
+.alert {
+    border-radius: 14px !important;
+    font-size: 1rem !important;
+    padding: 16px 24px !important;
+    margin-bottom: 25px;
+    border-left: 4px solid #6e8efb !important;
+    background-color: rgba(110, 142, 251, 0.08) !important;
+    color: #333 !important;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(110, 142, 251, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.branch-japan .alert {
+    border-left: 4px solid var(--japan-primary);
+}
+/* Animation */
+.fade-in {
+    animation: fadeIn 0.7s cubic-bezier(.4,2,.6,1);
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+/* Sidebar, header, etc. sẽ được custom thêm trong từng template nếu cần */
+
+.branch-vietnam {
+    --branch-color: var(--vietnam-primary);
+    --branch-accent: var(--vietnam-secondary);
+    --branch-light: var(--vietnam-secondary);
+}
+
+.branch-japan {
+    --branch-color: var(--japan-primary);
+    --branch-accent: var(--japan-secondary);
+    --branch-light: var(--japan-secondary);
+}
+
+.sidebar {
+    min-height: 100vh;
+    background-color: #4CAF50;
+    padding: 20px;
+    border-right: 1px solid #dee2e6;
+    color: #fff;
+}
+
+.branch-vietnam .sidebar {
+    border-right-color: var(--vietnam-primary);
+}
+
+.branch-japan .sidebar {
+    border-right-color: var(--japan-primary);
+}
+
+.main-content {
+    padding: 20px;
+}
+
+.header {
+    background-color: #fff;
+    color: #4CAF50;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border-bottom: 2px solid #4CAF50;
+}
+
+.branch-vietnam .header {
+    background-image: linear-gradient(to right, var(--vietnam-primary), var(--vietnam-secondary));
+}
+
+.branch-japan .header {
+    background-image: linear-gradient(to right, var(--japan-primary), var(--japan-secondary));
+}
+
+.nav-link {
+    color: #fff;
+    margin-bottom: 10px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+    border-left: 3px solid transparent;
+}
+
+.nav-link:hover {
+    background-color: #388E3C;
+    color: #fff;
+    border-left-color: var(--branch-color);
+    text-decoration: none;
+}
+
+.nav-link.active {
+    background-color: #388E3C;
+    color: #fff;
+    border-left-color: var(--branch-color);
+}
+
+.table th {
+    border-top: none;
+    background-color: var(--branch-light);
+    color: var(--branch-accent);
+}
+
+.badge {
+    padding: 5px 10px;
+    border-radius: 15px;
+}
+
+.branch-badge {
+    background-color: var(--branch-color);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    margin-left: 5px;
+}
+
+.pagination .page-link {
+    color: var(--branch-color);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--branch-color);
+    border-color: var(--branch-color);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sidebar {
+        min-height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--branch-color);
+    }
+    
+    .main-content {
+        padding: 10px;
+    }
+    
+    .header {
+        margin-bottom: 10px;
+    }
+}
+
+.branch-option {
+    flex: 1;
+    padding: 15px;
+    border: 2px solid #dee2e6;
+    border-radius: 5px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.branch-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.branch-option[data-branch="vietnam"]:hover {
+    border-color: var(--vietnam-primary);
+    background-color: var(--vietnam-secondary);
+}
+
+.branch-option[data-branch="japan"]:hover {
+    border-color: var(--japan-primary);
+    background-color: var(--japan-secondary);
+}
+
+.branch-option.selected[data-branch="vietnam"] {
+    border-color: var(--vietnam-primary);
+    background-color: var(--vietnam-secondary);
+}
+
+.branch-option.selected[data-branch="japan"] {
+    border-color: var(--japan-primary);
+    background-color: var(--japan-secondary);
+}
+
+.branch-option img {
+    width: 60px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.branch-option .country-name {
+    font-weight: 500;
+    color: #333;
+}
+
+/* Vietnam flag specific styles */
+.branch-option[data-branch="vietnam"] img {
+    border: 1px solid #dee2e6;
+}
+
+/* Japan flag specific styles */
+.branch-option[data-branch="japan"] img {
+    border: 1px solid #dee2e6;
+}
+
+/* Login button styles */
+.vietnam-button {
+    background-color: var(--vietnam-primary) !important;
+    border-color: var(--vietnam-secondary) !important;
+}
+
+.vietnam-button:hover {
+    background-color: var(--vietnam-secondary) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.japan-button {
+    background-color: var(--japan-primary) !important;
+    border-color: var(--japan-secondary) !important;
+}
+
+.japan-button:hover {
+    background-color: var(--japan-secondary) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Hiệu ứng chuyển động mượt mà */
+.smooth-transition {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Hiệu ứng hiển thị thông báo */
+#notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    min-width: 300px;
+    max-width: 500px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 4px;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease-in-out;
+}
+
+/* Hiệu ứng cho các hàng trong bảng */
+table tbody tr {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Hiệu ứng khi hover lên hàng trong bảng */
+table tbody tr:hover {
+    background-color: var(--branch-light);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Hiệu ứng cho các nút */
+.btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Hiệu ứng loading */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255,255,255,0.7);
+    z-index: 9998;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.loading-overlay.show {
+    opacity: 1;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    background: #e0e7ff;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #a777e3;
+    border-radius: 8px;
+}
+
+.sidebar .active, .sidebar a:hover {
+    background: #388E3C;
+    color: #fff;
+}
+
+.table tbody tr:nth-child(even) {
+    background: #F1F8E9;
+}
+
+.notification.success {
+    background: #4CAF50;
+    color: #fff;
+}
+
+.notification.error {
+    background: #FFC107;
+    color: #222;
+}
+
+/* Căn chỉnh dropdown phân trang cho cân đối */
+#pagination-size, .pagination-size-select, input[name="pagination-size"] {
+    height: 44px;
+    min-width: 80px;
+    padding: 0 16px;
+    font-size: 1rem;
+    border-radius: 14px;
+    border: 1px solid #BDBDBD;
+    background: #fff;
+    color: #222;
+    margin-left: 8px;
+    margin-right: 8px;
+    box-sizing: border-box;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+th, .table thead th, .dataTable thead th {
+    background: #E8F5E9 !important;
+    color: #388E3C !important;
+    border: none !important;
+    font-weight: 700 !important;
+    background-image: none !important;
+} 

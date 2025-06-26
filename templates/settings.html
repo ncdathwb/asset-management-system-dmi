@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}設定{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>設定</h2>
+    
+    <!-- Hidden inputs for JavaScript -->
+    <input type="hidden" id="isBranchAdmin" value="{{ current_user.is_branch_admin()|lower }}">
+    <input type="hidden" id="currentBranch" value="{{ current_user.branch }}">
+    
+    <!-- Notification Area -->
+    <div id="notification" class="alert d-none mb-3" role="alert"></div>
+    <div id="notificationArea"></div>
+    
+    <div class="row g-4">
+        <!-- Departments Section -->
+        <div class="col-12 col-md-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="mb-0">部署管理</h5>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
+                        <i class="fas fa-plus"></i> 新規部署追加
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table align-middle" id="departmentsTable">
+                            <thead>
+                                <tr>
+                                    <th>部署名</th>
+                                    <th>支店</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Asset Types Section -->
+        <div class="col-12 col-md-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                    <h5 class="mb-0">資産タイプ管理</h5>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAssetTypeModal">
+                        <i class="fas fa-plus"></i> 新規資産タイプ追加
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table align-middle" id="assetTypesTable">
+                            <thead>
+                                <tr>
+                                    <th>資産タイプ名</th>
+                                    <th>支店</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Modals -->
+{% include 'modals/department_modals.html' %}
+{% include 'modals/asset_type_modals.html' %}
+
+<style>
+/* Accessibility improvements for modals */
+.modal {
+    /* Ensure proper focus management */
+    outline: none;
+}
+
+.modal:not(.show) {
+    /* Use inert attribute when modal is hidden */
+    pointer-events: none;
+}
+
+.modal:not(.show) * {
+    /* Prevent focus on hidden modal elements */
+    pointer-events: none;
+}
+
+/* Ensure submit buttons are properly styled when disabled */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Focus management for form inputs */
+.modal input:focus,
+.modal button:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+/* Prevent double submission visual feedback */
+.btn:disabled .fa-spinner {
+    animation: fa-spin 1s infinite linear;
+}
+
+/* Ensure proper contrast for accessibility */
+.modal-title {
+    color: #212529;
+    font-weight: 600;
+}
+
+.form-label {
+    font-weight: 500;
+    color: #495057;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+{% endblock %} 

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('assets') }}">{{ _('Assets') }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ asset.name }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{{ _('Asset Information') }}</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>{{ _('Asset Code') }}</th>
+                            <td>{{ asset.asset_code }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ _('Name') }}</th>
+                            <td>{{ asset.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ _('Type') }}</th>
+                            <td>{{ asset.type }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ _('Total Quantity') }}</th>
+                            <td>{{ asset.quantity }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ _('Available') }}</th>
+                            <td>{{ asset.available_quantity }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ _('Status') }}</th>
+                            <td>
+                                {% if asset.status == 'Available' %}
+                                    <span class="badge bg-success">{{ asset.status }}</span>
+                                {% elif asset.status == 'In Use' %}
+                                    <span class="badge bg-primary">{{ asset.status }}</span>
+                                {% elif asset.status == 'Under maintenance' %}
+                                    <span class="badge bg-warning">{{ asset.status }}</span>
+                                {% elif asset.status == 'Damaged' %}
+                                    <span class="badge bg-danger">{{ asset.status }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ asset.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>{{ _('Branch') }}</th>
+                            <td>{{ asset.branch|upper }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{{ _('Assigned Employees') }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if employees %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>{{ _('Employee Code') }}</th>
+                                        <th>{{ _('Name') }}</th>
+                                        <th>{{ _('Department') }}</th>
+                                        <th>{{ _('Actions') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for employee in employees %}
+                                    <tr>
+                                        <td>{{ employee.employee_code }}</td>
+                                        <td>{{ employee.name }}</td>
+                                        <td>{{ employee.department }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-warning" onclick="reclaimAsset({{ employee.assignment_id }})">
+                                                {{ _('Reclaim') }}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">{{ _('No employees currently assigned to this asset.') }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reclaim Asset Modal -->
+<div class="modal fade" id="reclaimModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Reclaim Asset') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reclaimForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="assignment_id" id="reclaim_assignment_id">
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('Reason') }}</label>
+                        <select class="form-select" name="reason" required>
+                            <option value="">{{ _('Select a reason') }}</option>
+                            <option value="broken">{{ _('Asset is broken') }}</option>
+                            <option value="maintenance">{{ _('Asset needs maintenance') }}</option>
+                            <option value="lost">{{ _('Asset is lost') }}</option>
+                            <option value="not_in_use">{{ _('Asset is not in use') }}</option>
+                            <option value="other">{{ _('Other') }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('Notes') }}</label>
+                        <textarea class="form-control" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" class="btn btn-warning" onclick="submitReclaim()">{{ _('Reclaim') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function reclaimAsset(assignmentId) {
+    $('#reclaim_assignment_id').val(assignmentId);
+    $('#reclaimModal').modal('show');
+}
+
+function submitReclaim() {
+    const form = document.getElementById('reclaimForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    const formData = new FormData(form);
+    
+    $.ajax({
+        url: '/api/asset-assignments/' + formData.get('assignment_id') + '/reclaim',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        headers: {
+            'X-CSRFToken': $('input[name="csrf_token"]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                $('#reclaimModal').modal('hide');
+                showNotification(response.message, 'success');
+                setTimeout(function() {
+                    location.reload();
+                }, 1000);
+            } else {
+                showNotification('Error: ' + response.message, 'danger');
+            }
+        },
+        error: function(xhr) {
+            showNotification('Error reclaiming asset: ' + xhr.responseText, 'danger');
+        }
+    });
+}
+</script>
+{% endblock %} 

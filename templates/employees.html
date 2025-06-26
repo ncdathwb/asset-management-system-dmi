@@ -1,0 +1,788 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <!-- Thông báo -->
+    <div id="notification" class="alert d-none mb-3" role="alert"></div>
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>従業員管理</h2>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+            <i class="fas fa-plus"></i> 従業員を追加
+        </button>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <input type="text" class="form-control" id="searchInput" placeholder="従業員コードで検索......">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="departmentFilter">
+                        <option value="">すべての部署</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.name }}">{{ dept.jp }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">すべてのステータス</option>
+                        <option value="有効">有効</option>
+                        <option value="無効">無効</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-secondary" onclick="exportToCSV()">
+                        <i class="fas fa-download"></i> CSVにエクスポート
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employees Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>社員コード</th>
+                            <th>名前</th>
+                            <th>メールアドレス</th>
+                            <th>部署</th>
+                            <th>ステータス</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeeTableBody">
+                        {% for employee in employees %}
+                        <tr>
+                            <td>{{ employee.employee_code }}</td>
+                            <td>{{ employee.name }}</td>
+                            <td>{{ employee.email }}</td>
+                            <td>{{ employee.department_jp }}</td>
+                            <td>
+                                <span class="badge {% if employee.status == 'active' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if employee.status == 'active' %}有効{% else %}無効{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="editEmployee({{ employee.id }})" {% if employee.status != 'active' %}disabled{% endif %}>
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% if employee.id %}
+                                <button class="btn btn-sm btn-primary" onclick="viewEmployeeDetail({{ employee.id }})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                {% endif %}
+                                {% if employee.status == 'active' %}
+                                <button class="btn btn-sm btn-warning" onclick="deactivateEmployee({{ employee.id }})">
+                                    <i class="fas fa-user-slash"></i>
+                                </button>
+                                {% else %}
+                                <button class="btn btn-sm btn-danger" onclick="deleteEmployee({{ employee.id }}, this)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="d-flex justify-content-center mt-4">
+                {{ pagination.links }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Employee Modal -->
+<div class="modal fade" id="addEmployeeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新規従業員追加</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addEmployeeForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <div class="mb-3">
+                        <label class="form-label">名前</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">社員コード</label>
+                        <input type="text" class="form-control" name="employee_code" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">メールアドレス</label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">部署</label>
+                        <select class="form-select" name="department" required>
+                            {% for dept in departments %}
+                            <option value="{{ dept.name }}">{{ dept.jp }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" onclick="addEmployee()">追加</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Employee Modal -->
+<div class="modal fade" id="viewEmployeeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('Employee Details') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="employee-details mb-3">
+                    <div><strong>社員コード:</strong> <span id="detail-employee-code"></span></div>
+                    <div><strong>名前:</strong> <span id="detail-employee-name"></span></div>
+                    <div><strong>メールアドレス:</strong> <span id="detail-employee-email"></span></div>
+                    <div><strong>部署:</strong> <span id="detail-employee-department"></span></div>
+                    <div><strong>ステータス:</strong> <span id="detail-employee-status"></span></div>
+                </div>
+                <h6 class="mt-4 mb-3">保有中の資産</h6>
+                <div id="noAssignedAssetsMsg" class="alert alert-info d-none">
+                    この従業員は現在、資産を保有していません。
+                </div>
+                <form id="reclaimAssetsForm">
+                <table class="table table-striped d-none" id="assignedAssetsTable">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAllAssets"></th>
+                            <th>資産コード</th>
+                            <th>名前</th>
+                            <th>タイプ</th>
+                            <th>アクション</th>
+                        </tr>
+                    </thead>
+                    <tbody id="assignedAssetsTableBody">
+                    </tbody>
+                </table>
+                <button type="button" class="btn btn-danger d-none" id="reclaimSelectedBtn">選択した資産を回収</button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Employee Modal -->
+<div class="modal fade" id="editEmployeeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">従業員情報編集</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editEmployeeForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="employee_id" id="edit-employee-id">
+                    <div class="mb-3">
+                        <label class="form-label">名前</label>
+                        <input type="text" class="form-control" name="name" id="edit-employee-name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">メールアドレス</label>
+                        <input type="email" class="form-control" name="email" id="edit-employee-email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">部署</label>
+                        <select class="form-select" name="department" id="edit-employee-department" required>
+                            {% for dept in departments %}
+                            <option value="{{ dept.name }}">{{ dept.jp }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" onclick="submitEditEmployeeForm()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reclaim Asset Modal -->
+<div class="modal fade" id="reclaimAssetModalEmployee" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">資産の回収</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reclaimFormEmployee">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="assignment_ids" id="reclaim_assignment_ids_employee">
+                    <div class="mb-3">
+                        <label class="form-label">回収理由</label>
+                        <select class="form-select" name="reason" id="reclaim_reason_employee" required>
+                            <option value="">理由を選択</option>
+                            <option value="Under maintenance">メンテナンス中</option>
+                            <option value="Damaged">故障</option>
+                            <option value="Not in use / Idle">未使用</option>
+                            <option value="Lost">紛失</option>
+                            <option value="Other">その他</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="otherReasonDivEmployee" style="display: none;">
+                        <label class="form-label">その他の理由（指定してください）</label>
+                        <input type="text" class="form-control" name="other_reason" id="other_reclaim_reason_employee">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">メモ（任意）</label>
+                        <textarea class="form-control" name="notes" id="reclaim_notes_employee" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" id="confirmReclaimBtnEmployee">回収確認</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+<script>
+// Add immediate debug log to check if script is loaded
+console.log('Employee page script loaded');
+
+$(document).ready(function() {
+    console.log('Document ready');
+    
+    // Debug check if reclaim button exists
+    console.log('Number of reclaim buttons:', $('.reclaim-individual-asset-btn').length);
+    
+    // Debug check if modal exists
+    console.log('Reclaim modal exists:', $('#reclaimAssetModalEmployee').length > 0);
+    
+    // Debug check if confirm button exists
+    console.log('Confirm button exists:', $('#confirmReclaimBtnEmployee').length > 0);
+
+    // Cấu hình AJAX để gửi CSRF token trong mọi request
+    var csrf_token = "{{ csrf_token }}";
+    console.log('CSRF token:', csrf_token);
+    
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", csrf_token);
+            }
+        }
+    });
+
+    // Search functionality
+    $('#searchInput').on('keyup', function() {
+        var value = $(this).val().toLowerCase();
+        $("table tbody tr").filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+        });
+    });
+
+    // Department filter (cột phòng ban là index 3)
+    $('#departmentFilter').change(function() {
+        var value = $(this).val().toLowerCase();
+        $("table tbody tr").filter(function() {
+            $(this).toggle($(this).find('td:eq(3)').text().toLowerCase().indexOf(value) > -1)
+        });
+    });
+
+    // Status filter (cột trạng thái là index 4)
+    $('#statusFilter').change(function() {
+        var value = $(this).val();
+        $("table tbody tr").filter(function() {
+            if (!value) return $(this).show();
+            $(this).toggle($(this).find('td:eq(4)').text().indexOf(value) > -1);
+        });
+    });
+
+    // Test click handler
+    $(document).on('click', '.reclaim-individual-asset-btn', function(e) {
+        console.log('Reclaim button clicked - test');
+        e.preventDefault(); // Prevent default action
+        
+        const assignmentId = $(this).data('assignment-id');
+        console.log('Reclaim button clicked for assignment ID:', assignmentId);
+        
+        if (!assignmentId) {
+            console.error('No assignment ID found on button');
+            return;
+        }
+        
+        $('#reclaim_assignment_ids_employee').val(assignmentId);
+        console.log('Stored assignment ID in hidden input:', $('#reclaim_assignment_ids_employee').val());
+        
+        // Reset form
+        $('#reclaimFormEmployee')[0].reset();
+        $('#otherReasonDivEmployee').hide();
+        $('#other_reclaim_reason_employee').prop('required', false);
+        
+        $('#reclaimAssetModalEmployee').modal('show');
+    });
+
+    // Test confirm button handler
+    $('#confirmReclaimBtnEmployee').on('click', function(e) {
+        console.log('Confirm reclaim button clicked - test');
+        e.preventDefault();
+        
+        if (!validateReclaimFormEmployee()) {
+            console.log('Form validation failed');
+            return;
+        }
+
+        const assignmentId = $('#reclaim_assignment_ids_employee').val();
+        console.log('Assignment ID from form:', assignmentId);
+        
+        if (!assignmentId) {
+            console.error('No assignment ID found in form');
+            return;
+        }
+        
+        let reason = $('#reclaim_reason_employee').val();
+        const notes = $('#reclaim_notes_employee').val();
+        const employeeId = $('#detail-employee-id').val();
+        
+        console.log('Reclaim details:', {
+            assignmentId,
+            reason,
+            notes,
+            employeeId
+        });
+
+        if (reason === 'Other') {
+            reason = $('#other_reclaim_reason_employee').val();
+        }
+
+        $('#reclaimAssetModalEmployee .modal-footer').append('<span id="processingReclaimMsg" class="text-info ms-2">処理中...</span>');
+        $('#confirmReclaimBtnEmployee').prop('disabled', true);
+
+        const requestData = {
+            assignment_ids: JSON.stringify([assignmentId]),
+            reason: reason,
+            notes: notes
+        };
+        console.log('Sending request with data:', requestData);
+
+        $.ajax({
+            url: '/api/asset-assignments/bulk-reclaim',
+            method: 'POST',
+            data: requestData,
+            headers: {
+                'X-CSRFToken': csrf_token
+            },
+            success: function(response) {
+                console.log('Server response:', response);
+                
+                $('#processingReclaimMsg').remove();
+                $('#confirmReclaimBtnEmployee').prop('disabled', false);
+
+                if (response.success) {
+                    showNotification('資産の回収が完了しました', 'success');
+                    $('#reclaimAssetModalEmployee').modal('hide');
+                    
+                    viewEmployeeDetail(employeeId);
+                } else {
+                    console.error('Reclaim failed:', response.message);
+                    showNotification('エラー: ' + response.message, 'danger');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Ajax error:', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
+                });
+                
+                $('#processingReclaimMsg').remove();
+                $('#confirmReclaimBtnEmployee').prop('disabled', false);
+                
+                showNotification('資産の回収中にエラーが発生しました', 'danger');
+            }
+        });
+    });
+
+    // Add function to load employee assets count
+    function loadEmployeeAssetsCount() {
+        $('.view-assets-btn').each(function() {
+            const employeeId = $(this).data('employee-id');
+            $.ajax({
+                url: '/api/employees/' + employeeId + '/assets',
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        const count = response.assets ? response.assets.length : 0;
+                        $(`button[data-employee-id="${employeeId}"] .asset-count`).text(count);
+                    }
+                }
+            });
+        });
+    }
+
+    // Call loadEmployeeAssetsCount when page loads
+    loadEmployeeAssetsCount();
+
+    // Add click handler for view assets button
+    $(document).on('click', '.view-assets-btn', function() {
+        const employeeId = $(this).data('employee-id');
+        viewEmployeeDetail(employeeId);
+    });
+
+    // Sự kiện click cho nút "選択した資産を回収"
+    $('#reclaimSelectedBtn').on('click', function(e) {
+        e.preventDefault();
+        // Lấy danh sách assignment_id đã chọn
+        const selectedIds = $('.employee-asset-checkbox:checked').map(function() {
+            return $(this).data('assignment-id');
+        }).get();
+        if (selectedIds.length === 0) {
+            showNotification('回収する資産を選択してください。', 'warning');
+            return;
+        }
+        // Hiển thị modal nhập lý do thu hồi (dùng lại modal reclaimAssetModalEmployee)
+        $('#reclaim_assignment_ids_employee').val(JSON.stringify(selectedIds));
+        $('#reclaimFormEmployee')[0].reset();
+        $('#otherReasonDivEmployee').hide();
+        $('#other_reclaim_reason_employee').prop('required', false);
+        $('#reclaimAssetModalEmployee').modal('show');
+    });
+
+    // Sửa lại sự kiện xác nhận thu hồi để lấy đúng assignment_ids (1 hoặc nhiều)
+    $('#confirmReclaimBtnEmployee').off('click').on('click', function(e) {
+        e.preventDefault();
+        if (!validateReclaimFormEmployee()) {
+            return;
+        }
+        // Lấy assignment_ids từ hidden input (có thể là 1 hoặc nhiều)
+        let assignmentIds = $('#reclaim_assignment_ids_employee').val();
+        try {
+            assignmentIds = JSON.parse(assignmentIds);
+        } catch {
+            assignmentIds = [assignmentIds];
+        }
+        let reason = $('#reclaim_reason_employee').val();
+        if (reason === 'Other') {
+            reason = $('#other_reclaim_reason_employee').val();
+        }
+        const notes = $('#reclaim_notes_employee').val();
+        const employeeId = $('#detail-employee-id').val();
+        $('#reclaimAssetModalEmployee .modal-footer').append('<span id="processingReclaimMsg" class="text-info ms-2">処理中...</span>');
+        $('#confirmReclaimBtnEmployee').prop('disabled', true);
+        $.ajax({
+            url: '/api/asset-assignments/bulk-reclaim',
+            method: 'POST',
+            data: {
+                assignment_ids: JSON.stringify(assignmentIds),
+                reason: reason,
+                notes: notes
+            },
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                $('#processingReclaimMsg').remove();
+                $('#confirmReclaimBtnEmployee').prop('disabled', false);
+                if (response.success) {
+                    showNotification(response.message, 'success');
+                    $('#reclaimAssetModalEmployee').modal('hide');
+                    viewEmployeeDetail(employeeId);
+                } else {
+                    showNotification('エラー: ' + response.message, 'danger');
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#processingReclaimMsg').remove();
+                $('#confirmReclaimBtnEmployee').prop('disabled', false);
+                showNotification('資産の回収中にエラーが発生しました', 'danger');
+            }
+        });
+    });
+});
+
+function handleResponse(response, successMessage, errorMessage) {
+    if (response.success) {
+        showNotification(successMessage, 'success');
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+    } else {
+        showNotification(response.message || errorMessage, 'danger');
+    }
+}
+
+function addEmployee() {
+    const formData = new FormData(document.getElementById('addEmployeeForm'));
+    fetch('/api/employees', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(async response => {
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+            data = { success: false, message: 'サーバーからの応答が不正です。' };
+        }
+        if (!response.ok) {
+            showNotification(data.message || '従業員の追加に失敗しました', 'danger');
+        } else {
+            handleResponse(data, '従業員が正常に追加されました', '従業員の追加に失敗しました');
+        }
+    })
+    .catch(function(error) {
+        showNotification('エラーが発生しました', 'danger');
+    });
+}
+
+function editEmployee(id) {
+    $.ajax({
+        url: '/api/employees/' + id,
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                var employee = response.employee;
+                $('#edit-employee-id').val(employee.id);
+                $('#edit-employee-name').val(employee.name);
+                $('#edit-employee-email').val(employee.email);
+                $('#edit-employee-department').val(employee.department);
+                $('#editEmployeeModal').modal('show');
+            } else {
+                showNotification('従業員データの読み込み中にエラーが発生しました', 'danger');
+            }
+        }
+    });
+}
+
+function submitEditEmployeeForm() {
+    const formData = new FormData(document.getElementById('editEmployeeForm'));
+    const employeeId = document.getElementById('edit-employee-id').value;
+    fetch(`/api/employees/${employeeId}`, {
+        method: 'PUT',
+        body: formData,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        handleResponse(data, '従業員情報が正常に更新されました', '従業員情報の更新に失敗しました');
+    })
+    .catch(error => {
+        showNotification('エラーが発生しました', 'error');
+    });
+}
+
+function deactivateEmployee(employeeId) {
+    if (confirm('この従業員を無効化してもよろしいですか？')) {
+        fetch(`/api/employees/${employeeId}/deactivate`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            handleResponse(data, '従業員が正常に無効化されました', '従業員の無効化に失敗しました');
+        })
+        .catch(error => {
+            showNotification('エラーが発生しました', 'error');
+        });
+    }
+}
+
+function deleteEmployee(employeeId, btn) {
+    if (confirm('この従業員を削除してもよろしいですか？')) {
+        fetch(`/api/employees/${employeeId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const row = btn.closest('tr');
+                row.style.transition = 'all 0.5s cubic-bezier(.4,2,.6,1)';
+                row.style.opacity = '0.3';
+                row.style.transform = 'translateX(100px)';
+                setTimeout(() => {
+                    row.remove();
+                    showNotification(data.message, 'success');
+                }, 400);
+            } else {
+                showNotification(data.message || '従業員の削除に失敗しました', 'error');
+            }
+        })
+        .catch(error => {
+            showNotification('エラーが発生しました', 'error');
+        });
+    }
+}
+
+function viewEmployeeDetail(employeeId) {
+    $('#viewEmployeeModal').modal('show');
+    $('#assignedAssetsTable').addClass('d-none');
+    $('#noAssignedAssetsMsg').addClass('d-none');
+    $('#reclaimSelectedBtn').addClass('d-none');
+    
+    if (!$('#detail-employee-id').length) {
+        $('<input>').attr({
+            type: 'hidden',
+            id: 'detail-employee-id'
+        }).appendTo('#viewEmployeeModal');
+    }
+    $('#detail-employee-id').val(employeeId);
+    
+    $.ajax({
+        url: '/api/employees/' + employeeId + '/assets',
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                $('#detail-employee-code').text(response.employee.employee_code);
+                $('#detail-employee-name').text(response.employee.name);
+                $('#detail-employee-email').text(response.employee.email);
+                $('#detail-employee-department').text(response.employee.department_jp);
+                $('#detail-employee-status').text(response.employee.status === 'active' ? '有効' : '無効');
+                
+                var tableBody = $('#assignedAssetsTableBody');
+                tableBody.empty();
+                
+                if (response.assets && response.assets.length > 0) {
+                    $('#assignedAssetsTable').removeClass('d-none');
+                    $('#noAssignedAssetsMsg').addClass('d-none');
+                    
+                    response.assets.forEach(function(asset) {
+                        tableBody.append(`
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="employee-asset-checkbox" 
+                                           data-assignment-id="${asset.assignment_id}">
+                                </td>
+                                <td>${asset.asset_code}</td>
+                                <td>${asset.name}</td>
+                                <td>${asset.type}</td>
+                                <td>
+                                    <button class="btn btn-danger btn-sm reclaim-individual-asset-btn" 
+                                            data-assignment-id="${asset.assignment_id}">
+                                        <i class="fas fa-undo"></i> 回収
+                                    </button>
+                                </td>
+                            </tr>
+                        `);
+                    });
+                } else {
+                    $('#assignedAssetsTable').addClass('d-none');
+                    $('#noAssignedAssetsMsg').removeClass('d-none');
+                }
+            } else {
+                showNotification('エラー: ' + response.message, 'danger');
+            }
+        },
+        error: function() {
+            showNotification('従業員の詳細取得エラーが発生しました', 'danger');
+        }
+    });
+}
+
+// Handle select all assets checkbox
+$('#selectAllAssets').change(function() {
+    $('.employee-asset-checkbox').prop('checked', $(this).prop('checked'));
+    updateReclaimButton();
+});
+
+// Handle individual asset checkboxes
+$(document).on('change', '.employee-asset-checkbox', function() {
+    updateReclaimButton();
+});
+
+// Update reclaim button visibility
+function updateReclaimButton() {
+    const checkedCount = $('.employee-asset-checkbox:checked').length;
+    $('#reclaimSelectedBtn').toggleClass('d-none', checkedCount === 0);
+}
+
+// Handle reclaim reason change
+$('#reclaim_reason_employee').change(function() {
+    if ($(this).val() === 'Other') {
+        $('#otherReasonDivEmployee').show();
+        $('#other_reclaim_reason_employee').prop('required', true);
+    } else {
+        $('#otherReasonDivEmployee').hide();
+        $('#other_reclaim_reason_employee').prop('required', false);
+        $('#other_reclaim_reason_employee').val('');
+    }
+});
+
+// Add form validation function
+function validateReclaimFormEmployee() {
+    const form = document.getElementById('reclaimFormEmployee');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return false;
+    }
+
+    const reason = $('#reclaim_reason_employee').val();
+    if (reason === 'Other' && !$('#other_reclaim_reason_employee').val()) {
+        showNotification('その他の理由を入力してください', 'warning');
+        return false;
+    }
+
+    return confirm('選択した資産を回収してもよろしいですか？');
+}
+
+function exportToCSV() {
+    window.location.href = '/api/employees/export-csv';
+}
+
+// Toast notification function (toast style, like asset page)
+function showNotification(message, type) {
+    // Remove any existing notification
+    $('#notification').remove();
+    // Create notification element
+    const notification = $('<div id="notification" class="alert alert-' + (type === 'danger' ? 'danger' : (type === 'success' ? 'success' : 'info')) + ' alert-dismissible fade show" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 280px; max-width: 400px;">')
+        .text(message)
+        .append('<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>');
+    // Append to body
+    $('body').append(notification);
+    // Auto-hide after 4 seconds
+    setTimeout(function() {
+        notification.alert('close');
+    }, 4000);
+}
+
+// Ẩn thông báo khi mở modal thu hồi tài sản
+$('#reclaimAssetModalEmployee').on('show.bs.modal', function () {
+    $('#notification').hide();
+});
+</script>
+{% endblock %} 

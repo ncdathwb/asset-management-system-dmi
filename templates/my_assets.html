@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Notification area -->
+    <div id="notification" class="alert d-none mb-3" role="alert"></div>
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">{{ _('My Assets') }}</h2>
+        <button class="btn btn-primary" id="refreshAssetsBtn">
+            <i class="fas fa-sync-alt me-2"></i> {{ _('Refresh Assets') }}
+        </button>
+    </div>
+
+    <!-- My Assets Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">{{ _('Assigned Assets') }}</h5>
+            <div class="d-flex align-items-center">
+                <div class="input-group input-group-sm" style="width: 200px;">
+                    <input type="text" class="form-control" id="assetSearch" placeholder="{{ _('Search assets...') }}">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="myAssetsTable">
+                    <thead>
+                        <tr>
+                            <th>{{ _('Asset Code') }}</th>
+                            <th>{{ _('Name') }}</th>
+                            <th>{{ _('Type') }}</th>
+                            <th>{{ _('Status') }}</th>
+                            <th>{{ _('Assigned Date') }}</th>
+                            <th>{{ _('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Will be populated via JavaScript -->
+                    </tbody>
+                </table>
+                <div id="myAssetsEmpty" class="text-center py-4 d-none">
+                    <div class="mb-3">
+                        <i class="fas fa-inbox fa-3x text-muted"></i>
+                    </div>
+                    <h5 class="text-muted">{{ _('No Assets Assigned') }}</h5>
+                    <p class="text-muted">{{ _('You don\'t have any assets assigned to you currently.') }}</p>
+                </div>
+                <div id="loadingAssets" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">{{ _('Loading...') }}</span>
+                    </div>
+                    <p class="mt-2">{{ _('Loading your assets...') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Return Asset Request Modal -->
+    <div class="modal fade" id="returnAssetModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ _('Request Asset Return') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="returnAssetForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="assignment_id" id="return-assignment-id">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">{{ _('Asset Information') }}</label>
+                            <input type="text" class="form-control" id="return-asset-info" readonly>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">{{ _('Return Reason') }}</label>
+                            <textarea class="form-control" name="notes" rows="3" placeholder="{{ _('Please explain why you\'re returning this asset') }}"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                    <button type="button" class="btn btn-primary" id="submitReturnBtn">
+                        <span class="btn-text">{{ _('Submit Request') }}</span>
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden data fields for JavaScript -->
+<input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Function to show notifications
+function showNotification(message, type) {
+    const notification = $('#notification');
+    notification.text(message);
+    notification.removeClass('d-none alert-success alert-danger alert-warning alert-info');
+    notification.addClass('alert-' + type);
+    notification.fadeIn();
+    
+    // Hide notification after 5 seconds
+    setTimeout(function() {
+        notification.fadeOut(500, function() {
+            notification.addClass('d-none');
+        });
+    }, 5000);
+}
+
+// Function to format date
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+}
+
+// Load my assets data
+function loadMyAssets() {
+    $('#loadingAssets').removeClass('d-none');
+    $('#myAssetsTable tbody').empty();
+    $('#myAssetsEmpty').addClass('d-none');
+    
+    $.ajax({
+        url: '/api/my-assets',
+        method: 'GET',
+        success: function(response) {
+            $('#loadingAssets').addClass('d-none');
+            
+            if (response.success) {
+                const table = $('#myAssetsTable tbody');
+                
+                if (response.assets && response.assets.length > 0) {
+                    response.assets.forEach(function(asset) {
+                        let row = '<tr class="asset-row">';
+                        row += '<td><span class="asset-code">' + asset.asset_code + '</span></td>';
+                        row += '<td><span class="asset-name">' + asset.name + '</span></td>';
+                        row += '<td><span class="badge asset-type">' + asset.type + '</span></td>';
+                        row += '<td>' + (asset.status || 'N/A') + '</td>';
+                        row += '<td>' + asset.assigned_date + '</td>';
+                        row += '<td>';
+                        
+                        // Check if there's already a pending return request
+                        if (!asset.has_pending_return) {
+                            row += '<button class="btn btn-primary btn-sm return-btn" ' +
+                                  'data-assignment-id="' + asset.assignment_id + '" ' +
+                                  'data-asset-name="' + asset.name + '" ' +
+                                  'data-asset-code="' + asset.asset_code + '">' +
+                                  '<i class="fas fa-undo me-1"></i> {{ _('Request Return') }}</button>';
+                        } else {
+                            row += '<span class="badge return-pending">{{ _('Return Pending') }}</span>';
+                        }
+                        
+                        row += '</td>';
+                        row += '</tr>';
+                        table.append(row);
+                    });
+                    
+                    applyAssetStyling();
+                } else {
+                    $('#myAssetsEmpty').removeClass('d-none');
+                }
+            } else {
+                showNotification('Error loading assets: ' + response.message, 'danger');
+            }
+        },
+        error: function() {
+            $('#loadingAssets').addClass('d-none');
+            showNotification('Failed to load assets. Please try again.', 'danger');
+        }
+    });
+}
+
+// Apply styling to elements based on branch
+function applyAssetStyling() {
+    const branch = document.body.className.includes('branch-vietnam') ? 'vietnam' : 'japan';
+    
+    // Style for asset type badges
+    $('.asset-type').each(function() {
+        if (branch === 'vietnam') {
+            $(this).addClass('bg-success bg-opacity-10 text-success');
+        } else {
+            $(this).addClass('bg-danger bg-opacity-10 text-danger');
+        }
+        $(this).addClass('rounded-pill px-3 py-2');
+    });
+    
+    // Style for return pending badges
+    $('.return-pending').each(function() {
+        if (branch === 'vietnam') {
+            $(this).addClass('bg-warning bg-opacity-10 text-warning');
+        } else {
+            $(this).addClass('bg-warning bg-opacity-10 text-warning');
+        }
+        $(this).addClass('rounded-pill px-3 py-2');
+        $(this).text('{{ _('Return Pending') }}');
+    });
+    
+    // Style for return buttons
+    $('.return-btn').each(function() {
+        if (branch === 'vietnam') {
+            $(this).removeClass('btn-primary').addClass('btn-outline-success');
+        } else {
+            $(this).removeClass('btn-primary').addClass('btn-outline-danger');
+        }
+    });
+}
+
+// Open return asset modal
+function openReturnModal(assignmentId, assetName, assetCode) {
+    $('#return-assignment-id').val(assignmentId);
+    $('#return-asset-info').val(assetName + ' (' + assetCode + ')');
+    $('#returnAssetModal').modal('show');
+}
+
+// Submit return asset request
+function submitReturnRequest() {
+    const formData = new FormData($('#returnAssetForm')[0]);
+    const submitBtn = $('#submitReturnBtn');
+    
+    // Disable button and show spinner
+    submitBtn.prop('disabled', true);
+    submitBtn.find('.btn-text').addClass('d-none');
+    submitBtn.find('.spinner-border').removeClass('d-none');
+    
+    $.ajax({
+        url: '/api/asset-return-requests',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            // Reset button state
+            submitBtn.prop('disabled', false);
+            submitBtn.find('.btn-text').removeClass('d-none');
+            submitBtn.find('.spinner-border').addClass('d-none');
+            
+            if (response.success) {
+                // Hide modal
+                $('#returnAssetModal').modal('hide');
+                
+                // Show success message
+                showNotification(response.message, 'success');
+                
+                // Reset form
+                $('#returnAssetForm')[0].reset();
+                
+                // Reload assets
+                loadMyAssets();
+            } else {
+                showNotification(response.message, 'danger');
+            }
+        },
+        error: function() {
+            // Reset button state
+            submitBtn.prop('disabled', false);
+            submitBtn.find('.btn-text').removeClass('d-none');
+            submitBtn.find('.spinner-border').addClass('d-none');
+            
+            showNotification('An error occurred while submitting your request', 'danger');
+        }
+    });
+}
+
+// Filter assets based on search input
+function filterAssets() {
+    const value = $('#assetSearch').val().toLowerCase();
+    
+    $('.asset-row').each(function() {
+        const assetCode = $(this).find('.asset-code').text().toLowerCase();
+        const assetName = $(this).find('.asset-name').text().toLowerCase();
+        const assetType = $(this).find('.asset-type').text().toLowerCase();
+        
+        if (assetCode.includes(value) || assetName.includes(value) || assetType.includes(value)) {
+            $(this).show();
+        } else {
+            $(this).hide();
+        }
+    });
+}
+
+// Initialize page
+$(document).ready(function() {
+    // Load assets
+    loadMyAssets();
+    
+    // Handle return button click
+    $(document).on('click', '.return-btn', function() {
+        const assignmentId = $(this).data('assignment-id');
+        const assetName = $(this).data('asset-name');
+        const assetCode = $(this).data('asset-code');
+        openReturnModal(assignmentId, assetName, assetCode);
+    });
+    
+    // Handle return form submission
+    $('#submitReturnBtn').on('click', function() {
+        submitReturnRequest();
+    });
+    
+    // Handle refresh button click
+    $('#refreshAssetsBtn').on('click', function() {
+        loadMyAssets();
+    });
+    
+    // Handle search input
+    $('#assetSearch').on('keyup', function() {
+        filterAssets();
+    });
+});
+</script>
+{% endblock %} 

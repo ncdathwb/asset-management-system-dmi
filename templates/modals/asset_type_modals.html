@@ -1,0 +1,79 @@
+<!-- Edit Asset Type Modal -->
+{% if current_user.is_branch_admin() or current_user.is_super_admin() %}
+<div class="modal fade" id="editAssetTypeModal" tabindex="-1" aria-labelledby="editAssetTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editAssetTypeModalLabel">資産タイプ編集</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editAssetTypeForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="id" id="editAssetTypeId">
+                    <div class="mb-3">
+                        <label class="form-label" for="editAssetTypeName">資産タイプ名</label>
+                        <input type="text" class="form-control" name="name" id="editAssetTypeName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">支店</label>
+                        <input type="text" class="form-control" value="{% if current_user.branch == 'vietnam' %}ベトナム{% elif current_user.branch == 'japan' %}日本{% else %}{{ current_user.branch }}{% endif %}" readonly>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="submit" form="editAssetTypeForm" class="btn btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Add Asset Type Modal -->
+<div class="modal fade" id="addAssetTypeModal" tabindex="-1" aria-labelledby="addAssetTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addAssetTypeModalLabel">新規資産タイプ追加</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="assetTypeForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <div class="mb-3">
+                        <label class="form-label" for="assetTypeName">資産タイプ名</label>
+                        <input type="text" class="form-control" name="name" id="assetTypeName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">支店</label>
+                        <input type="text" class="form-control" value="{% if current_user.branch == 'vietnam' %}ベトナム{% elif current_user.branch == 'japan' %}日本{% else %}{{ current_user.branch }}{% endif %}" readonly>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="submit" form="assetTypeForm" class="btn btn-primary">追加</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Asset Type Modal -->
+<div class="modal fade" id="deleteAssetTypeModal" tabindex="-1" aria-labelledby="deleteAssetTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteAssetTypeModalLabel">資産タイプ削除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>資産タイプ <b id="deleteAssetTypeName"></b> を削除してもよろしいですか？</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteAssetTypeBtn">削除</button>
+            </div>
+        </div>
+    </div>
+</div> 

@@ -1,0 +1,533 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Limit card height */
+    .dashboard-card {
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .dashboard-card .card-body {
+        flex: 1 1 auto;
+    }
+    /* New styles for pending requests card */
+    .pending-requests-card .card-body {
+        padding: 15px;
+    }
+    .pending-requests-card .card-title {
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+    }
+    .pending-requests-card .card-text {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+    .pending-requests-card a {
+        text-decoration: none;
+    }
+    .pending-requests-card .icon-box {
+        background-color: rgba(255, 193, 7, 0.1);
+        color: #ffc107;
+    }
+    /* Style for chart containers */
+    .chart-card .card-body {
+        position: relative;
+        height: 300px;
+    }
+     .chart-card canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+    /* Style for recent activities list */
+    .recent-activities-list {
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+</style>
+
+<!-- Thêm Chart.js CDN để sử dụng đối tượng Chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Add Chart.js configuration for Japanese font support -->
+<script>
+    Chart.defaults.font.family = "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif";
+    Chart.defaults.font.size = 14;
+    Chart.defaults.plugins.legend.labels.font = {
+        family: "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif",
+        size: 14
+    };
+    Chart.defaults.plugins.tooltip.titleFont = {
+        family: "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif",
+        size: 14
+    };
+    Chart.defaults.plugins.tooltip.bodyFont = {
+        family: "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif",
+        size: 14
+    };
+</script>
+
+<div class="container-fluid p-0">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h2 class="fw-bold">{{ _('Dashboard') }}</h2>
+        <!-- Removed time filter and refresh button -->
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="row g-2 g-md-3 mb-4">
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card dashboard-card h-100">
+                <div class="card-body d-flex flex-column justify-content-center">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="card-subtitle text-muted">{{ _('Total Employees') }}</h6>
+                        <div class="icon-box">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                    <h3 class="card-title fw-bold mb-0">{{ total_employees }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card dashboard-card h-100">
+                <div class="card-body d-flex flex-column justify-content-center">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="card-subtitle text-muted">{{ _('Total Assets') }}</h6>
+                        <div class="icon-box">
+                            <i class="fas fa-laptop"></i>
+                        </div>
+                    </div>
+                    <h3 class="card-title fw-bold mb-0">{{ total_assets }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card dashboard-card h-100">
+                <div class="card-body d-flex flex-column justify-content-center">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="card-subtitle text-muted">{{ _('Assigned Assets') }}</h6>
+                        <div class="icon-box">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                    <h3 class="card-title fw-bold mb-0">{{ assigned_assets }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card dashboard-card h-100">
+                <div class="card-body d-flex flex-column justify-content-center">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="card-subtitle text-muted">{{ _('Available Assets') }}</h6>
+                        <div class="icon-box">
+                            <i class="fas fa-box-open"></i>
+                        </div>
+                    </div>
+                    <h3 class="card-title fw-bold mb-0">{{ available_assets }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Requests Cards -->
+    <div class="row g-2 g-md-3 mb-4">
+        {% if current_user.is_super_admin() or current_user.is_branch_admin() %}
+        <div class="col-12 col-md-6">
+            <a href="{{ url_for('asset_requests') }}" class="card pending-requests-card h-100">
+                <div class="card-body d-flex justify-content-between align-items-center p-3">
+                    <div>
+                        <h6 class="card-subtitle text-muted mb-1">{{ _('Pending Asset Requests') }}</h6>
+                        <h3 class="card-title fw-bold mb-0 text-warning">{{ pending_asset_requests_count }}</h3>
+                    </div>
+                    <div class="icon-box flex-shrink-0">
+                        <i class="fas fa-hourglass-half fa-2x"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-12 col-md-6">
+             <a href="{{ url_for('asset_return_requests') }}" class="card pending-requests-card h-100">
+                <div class="card-body d-flex justify-content-between align-items-center p-3">
+                    <div>
+                        <h6 class="card-subtitle text-muted mb-1">{{ _('Pending Return Requests') }}</h6>
+                        <h3 class="card-title fw-bold mb-0 text-warning">{{ pending_return_requests_count }}</h3>
+                    </div>
+                    <div class="icon-box flex-shrink-0">
+                        <i class="fas fa-undo fa-2x"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Asset Statistics Charts -->
+    <div class="row g-2 g-md-3 mb-4">
+        <div class="col-12 col-lg-6">
+            <div class="card h-100 chart-card">
+                <div class="card-header">{{ _('Asset Statistics by Type') }}</div>
+                <div class="card-body">
+                    <canvas id="assetTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card h-100 chart-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    {{ _('Asset Statistics by Department (Assigned)') }}
+                    <div class="dropdown">
+                        <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" id="departmentChartTimeFilter" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ _('Last 7 Days') }} {# Default text, replace with current filter #}
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="departmentChartTimeFilter">
+                            <li><a class="dropdown-item" href="#" data-filter="week">{{ _('Week') }}</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="month">{{ _('Month') }}</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="quarter">{{ _('Quarter') }}</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="year">{{ _('Year') }}</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="departmentAssetChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Asset Flow Chart -->
+     <div class="row g-2 g-md-3 mb-4">
+        <div class="col-12">
+            <div class="card h-100 chart-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    {{ _('Asset Assignment and Return Count') }}
+                    <div class="dropdown">
+                        <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" id="assetFlowChartTimeFilter" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ _('Last 7 Days') }} {# Default text, replace with current filter #}
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="assetFlowChartTimeFilter">
+                            <li><a class="dropdown-item" href="#" data-filter="week">{{ _('Week') }}</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="month">{{ _('Month') }}</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="quarter">{{ _('Quarter') }}</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="year">{{ _('Year') }}</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="assetFlowChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+     <!-- Other Stats and Recent Activities -->
+     <div class="row g-2 g-md-3 mb-4">
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">ステータス別の資産統計</div>
+                <div class="card-body">
+                    {% if asset_status_labels or maintenance_assets > 0 or broken_assets > 0 %}
+                         <ul class="list-group list-group-flush">
+                         {% for i in range(asset_status_labels|length) %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ asset_status_labels[i] }}
+                                <span class="badge bg-primary rounded-pill">{{ asset_status_counts[i] }}</span>
+                            </li>
+                         {% endfor %}
+                         </ul>
+                     {% else %}
+                         <p>{{ _('No asset status data available.') }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+         <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                 <div class="card-header">最近のアクティビティ（資産割り当て)</div>
+                 <div class="card-body">
+                     {% if recent_activities %}
+                         <ul class="list-group list-group-flush recent-activities-list">
+                             {% for activity in recent_activities %}
+                                 <li class="list-group-item">
+                                     {% if activity.type == 'assigned' %}
+                                         従業員 <strong>{{ activity.employee.name }}</strong> に資産 <strong>{{ activity.asset.name }} ({{ activity.asset.asset_code }})</strong> を割り当てました
+                                     {% elif activity.type == 'returned' %}
+                                         従業員 <strong>{{ activity.employee.name }}</strong> から資産 <strong>{{ activity.asset.name }} ({{ activity.asset.asset_code }})</strong> を回収しました
+                                     {% elif activity.type == 'request_approved' %}
+                                         従業員 <strong>{{ activity.employee.name }}</strong> の資産リクエスト <strong>{{ activity.asset.name if activity.asset else '' }}{% if activity.asset and activity.asset.asset_code %} ({{ activity.asset.asset_code }}){% endif %}</strong> を承認しました
+                                     {% elif activity.type == 'request_rejected' %}
+                                         従業員 <strong>{{ activity.employee.name }}</strong> の資産リクエスト <strong>{{ activity.asset.name if activity.asset else '' }}{% if activity.asset and activity.asset.asset_code %} ({{ activity.asset.asset_code }}){% endif %}</strong> を拒否しました
+                                     {% elif activity.type == 'return_approved' %}
+                                         従業員 <strong>{{ activity.employee.name }}</strong> の資産返却リクエスト <strong>{{ activity.asset.name if activity.asset else '' }}{% if activity.asset and activity.asset.asset_code %} ({{ activity.asset.asset_code }}){% endif %}</strong> を承認しました
+                                     {% elif activity.type == 'return_rejected' %}
+                                         従業員 <strong>{{ activity.employee.name }}</strong> の資産返却リクエスト <strong>{{ activity.asset.name if activity.asset else '' }}{% if activity.asset and activity.asset.asset_code %} ({{ activity.asset.asset_code }}){% endif %}</strong> を拒否しました
+                                     {% endif %}
+                                     {% if activity.note %}<br><span class="text-muted small">{{ activity.note }}</span>{% endif %}
+                                     <br>
+                                     <small class="text-muted">{{ activity.date.strftime('%d-%m-%Y') }}</small>
+                                 </li>
+                             {% endfor %}
+                         </ul>
+                     {% else %}
+                         <p>最近の活動はありません</p>
+                     {% endif %}
+                 </div>
+             </div>
+         </div>
+     </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Data passed from Flask backend (initial data)
+    const assetTypeLabels = {{ asset_types|tojson|safe }};
+    const assetTypeCounts = {{ asset_type_counts|tojson|safe }};
+    const departmentLabels = {{ department_labels|tojson|safe }};
+    const departmentAssetCounts = {{ department_asset_counts|tojson|safe }};
+    const dayLabels = {{ day_labels|tojson|safe }};
+    const assignedPerDay = {{ assigned_per_day|tojson|safe }};
+    const returnedPerDay = {{ returned_per_day|tojson|safe }};
+    // The following might not be used by the charts below, but are kept as they are passed initially
+    const topEmployeeNames = {{ top_employee_names|tojson|safe }};
+    const topEmployeeCounts = {{ top_employee_counts|tojson|safe }};
+    const topDepartmentNames = {{ top_department_names|tojson|safe }};
+    const topDepartmentCounts = {{ top_department_counts|tojson|safe }};
+    const assetStatusLabels = {{ asset_status_labels|tojson|safe }};
+    const assetStatusCounts = {{ asset_status_counts|tojson|safe }};
+    const noDepartmentDataMsg = "{{ _('No department data available.') }}";
+
+    // Function to generate dynamic colors
+    function generateColors(num) {
+        const colors = [];
+        for (let i = 0; i < num; i++) {
+            const hue = (i * 137.508) % 360; // Golden angle approximation
+            colors.push(`hsl(${hue}, 70%, 60%)`);
+        }
+        return colors;
+    }
+
+    // Variables to hold chart instances
+    let departmentAssetChartInstance = null;
+    let assetFlowChartInstance = null;
+
+
+    // Biểu đồ loại tài sản (tròn)
+    if (assetTypeLabels && assetTypeLabels.length > 0 && !(assetTypeLabels.length === 1 && assetTypeLabels[0] === 'No Data')) {
+        const assetTypeCtx = document.getElementById('assetTypeChart').getContext('2d');
+        new Chart(assetTypeCtx, {
+            type: 'pie',
+            data: {
+                labels: assetTypeLabels,
+                datasets: [{
+                    data: assetTypeCounts,
+                    backgroundColor: generateColors(assetTypeLabels.length),
+                    borderColor: '#ffffff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    title: {
+                        display: false,
+                        text: 'Asset Statistics by Type'
+                    }
+                }
+            }
+        });
+    } else {
+         document.getElementById('assetTypeChart').parentElement.innerHTML = '<p>データがありません</p>';
+    }
+
+    // Department Asset Chart (Bar Chart) - Initial rendering
+     if (departmentLabels && departmentLabels.length > 0 && !(departmentLabels.length === 1 && departmentLabels[0] === 'No Data')) {
+        const departmentAssetCtx = document.getElementById('departmentAssetChart').getContext('2d');
+        departmentAssetChartInstance = new Chart(departmentAssetCtx, { // Store instance in variable
+            type: 'bar',
+            data: {
+                labels: departmentLabels,
+                datasets: [{
+                    label: 'Number of Assigned Assets', // English label
+                    data: departmentAssetCounts,
+                     backgroundColor: generateColors(departmentLabels.length),
+                     borderColor: generateColors(departmentLabels.length).map(color => color.replace('60%', '40%')), // Darker border
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                     title: {
+                        display: false,
+                        text: 'Asset Statistics by Department'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0 // Ensure whole numbers on y-axis
+                        }
+
+                    }
+                }
+            }
+        });
+     } else {
+          document.getElementById('departmentAssetChart').parentElement.innerHTML = `<p>${noDepartmentDataMsg}</p>`;
+     }
+
+     // Asset Flow Chart (Line Chart) - Initial rendering
+     if (dayLabels && dayLabels.length > 0) {
+         const assetFlowCtx = document.getElementById('assetFlowChart').getContext('2d');
+         assetFlowChartInstance = new Chart(assetFlowCtx, { // Store instance in variable
+             type: 'line',
+             data: {
+                 labels: dayLabels,
+                 datasets: [
+                     {
+                         label: '割り当て済み',
+                         data: assignedPerDay,
+                         borderColor: 'rgb(75, 192, 192)',
+                         tension: 0.1
+                     },
+                      {
+                         label: '返却済み',
+                         data: returnedPerDay,
+                         borderColor: 'rgb(255, 99, 132)',
+                         tension: 0.1
+                     }
+                 ]
+             },
+             options: {
+                 responsive: true,
+                 maintainAspectRatio: false,
+                  plugins: {
+                     title: {
+                        display: false,
+                        text: 'Asset Assignment and Return Count (Last 7 Days)'
+                    }
+                 },
+                 scales: {
+                    y: {
+                        beginAtZero: true,
+                            ticks: {
+                                precision: 0 // Ensure whole numbers on y-axis
+                            }
+                    }
+                }
+             }
+         });
+     } else {
+          document.getElementById('assetFlowChart').parentElement.innerHTML = '<p>No recent assignment/return data.</p>';
+     }
+
+
+     // Add event listeners for time filters
+     document.querySelectorAll('.dropdown-menu .dropdown-item').forEach(item => {
+         item.addEventListener('click', function(e) {
+             e.preventDefault(); // Prevent default link behavior
+
+             const filter = this.getAttribute('data-filter');
+             const button = this.closest('.dropdown').querySelector('.dropdown-toggle');
+             const cardHeader = this.closest('.card-header');
+             let chartId = null;
+
+             // Determine which chart this filter belongs to
+             if (cardHeader.parentElement.querySelector('#departmentAssetChart')) {
+                 chartId = 'departmentAssetChart';
+                 button.textContent = this.textContent; // Update button text
+                 // Call function to update Department Asset Chart
+                 updateDepartmentAssetChart(filter);
+             } else if (cardHeader.parentElement.querySelector('#assetFlowChart')) {
+                 chartId = 'assetFlowChart';
+                  button.textContent = this.textContent; // Update button text
+                 // Call function to update Asset Flow Chart
+                  updateAssetFlowChart(filter);
+             }
+
+             console.log(`Selected filter: ${filter} for chart: ${chartId}`);
+
+             // The fetch/update logic is now inside the update functions below
+         });
+     });
+
+    // Function to update Department Asset Chart data from backend
+    function updateDepartmentAssetChart(filter) {
+        console.log(`Fetching data for Department Asset Chart with filter: ${filter}`);
+        // TODO: --- START OF USER MODIFIABLE SECTION (FRONTEND) ---
+        // 1. Replace '/api/department_assets' with your actual backend API route URL
+        //    that you created to provide this data.
+        // 2. Ensure the JSON structure returned by your backend matches how you use
+        //    the data here (e.g., data.labels, data.counts).
+        fetch(`/api/department_assets?filter=${filter}`) // <<< MODIFY THIS URL
+            .then(response => {
+                if (!response.ok) {
+                    // Handle error if backend returns an error status code (like 404)
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Assuming 'data' contains { labels: [...], counts: [...] }
+                // Update chart data and labels
+                if (departmentAssetChartInstance) { // Check if the instance exists
+                    departmentAssetChartInstance.data.labels = data.labels;
+                    departmentAssetChartInstance.data.datasets[0].data = data.counts; // Assuming one dataset for counts
+                    departmentAssetChartInstance.update(); // Redraw the chart
+                    console.log('Department Asset data updated successfully:', data);
+                } else {
+                     console.error('Department Asset Chart instance not found.');
+                }
+            })
+            .catch(error => console.error('Error fetching department asset data:', error));
+         // TODO: --- END OF USER MODIFIABLE SECTION (FRONTEND) ---
+    }
+
+    // Function to update Asset Flow Chart data from backend
+    function updateAssetFlowChart(filter) {
+         console.log(`Fetching data for Asset Flow Chart with filter: ${filter}`);
+         // TODO: --- START OF USER MODIFIABLE SECTION (FRONTEND) ---
+         // 1. Replace '/api/asset_flow' with your actual backend API route URL
+         //    that you created to provide this data.
+         // 2. Ensure the JSON structure returned by your backend matches how you use
+         //    the data here (e.g., data.labels, data.assigned, data.returned).
+         fetch(`/api/asset_flow?filter=${filter}`) // <<< MODIFY THIS URL
+             .then(response => {
+                 if (!response.ok) {
+                     // Handle error if backend returns an error status code (like 404)
+                     throw new Error(`HTTP error! status: ${response.status}`);
+                 }
+                 return response.json();
+             })
+             .then(data => {
+                 // Assuming 'data' contains { labels: [...], assigned: [...], returned: [...] }
+                 // Update chart data and labels
+                 if (assetFlowChartInstance) { // Check if the instance exists
+                    assetFlowChartInstance.data.labels = data.labels;
+                    // Assuming assigned is dataset 0 and returned is dataset 1
+                    assetFlowChartInstance.data.datasets[0].data = data.assigned;
+                    assetFlowChartInstance.data.datasets[1].data = data.returned;
+                    assetFlowChartInstance.update(); // Redraw the chart
+                    console.log('Asset Flow data updated successfully:', data);
+                 } else {
+                     console.error('Asset Flow Chart instance not found.');
+                 }
+             })
+             .catch(error => console.error('Error fetching asset flow data:', error));
+        // TODO: --- END OF USER MODIFIABLE SECTION (FRONTEND) ---
+    }
+
+</script>
+{% endblock %} 

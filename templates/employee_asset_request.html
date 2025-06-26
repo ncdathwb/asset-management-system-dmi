@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Asset Assignment/Return Request</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .centered-form {
+            max-width: 400px;
+            margin: 32px auto;
+        }
+        .nav-tabs .nav-link {
+            font-weight: 600;
+            font-size: 1.08rem;
+            border-radius: 14px 14px 0 0;
+            color: #6e8efb;
+            background: #f8fafd;
+            margin-right: 4px;
+            transition: all 0.3s;
+        }
+        .nav-tabs .nav-link.active {
+            background: linear-gradient(90deg, #6e8efb 60%, #a777e3 100%);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(110, 142, 251, 0.08);
+        }
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .select2-container--default .select2-selection--single {
+            border-radius: 14px !important;
+            min-height: 44px;
+            font-size: 1rem;
+            border: 2px solid #e2e8f0 !important;
+            background: #f8fafd !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 6px 12px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 40px;
+            font-weight: 500;
+            color: #333;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 44px;
+        }
+        .select2-dropdown {
+            border-radius: 14px !important;
+            box-shadow: 0 8px 32px rgba(110, 142, 251, 0.12);
+            font-family: 'Poppins', Arial, sans-serif;
+        }
+        .select2-results__option {
+            padding: 10px 16px;
+            font-size: 1rem;
+        }
+        .select2-results__option--highlighted {
+            background: linear-gradient(90deg, #6e8efb 60%, #a777e3 100%) !important;
+            color: #fff !important;
+        }
+        .autocomplete-suggestions {
+            border-radius: 0 0 14px 14px;
+            font-family: 'Poppins', Arial, sans-serif;
+        }
+        .card, .modal-content {
+            border-radius: 24px !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255,255,255,0.08) inset !important;
+            background: rgba(255,255,255,0.97) !important;
+            backdrop-filter: blur(6px);
+            padding: 20px 20px;
+            transition: box-shadow 0.3s;
+        }
+        .card:hover, .modal-content:hover {
+            box-shadow: 0 12px 32px rgba(110, 142, 251, 0.13);
+        }
+        @media (max-width: 500px) {
+            .centered-form {
+                max-width: 98vw;
+                padding: 0 2vw;
+            }
+            .card, .modal-content {
+                padding: 10px 2vw;
+            }
+        }
+        input.form-control, select.form-select, textarea.form-control {
+            border-radius: 14px !important;
+            background: #f8fafd !important;
+            border: 2px solid #e2e8f0 !important;
+            font-size: 1rem;
+            font-family: 'Poppins', Arial, sans-serif;
+            padding: 12px 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: border 0.3s, box-shadow 0.3s;
+        }
+        input.form-control:focus, select.form-select:focus, textarea.form-control:focus {
+            border-color: #e2e8f0 !important;
+            box-shadow: none !important;
+            background: #fff !important;
+        }
+    </style>
+</head>
+<body>
+<div class="container centered-form">
+    <div id="notification" class="alert d-none mb-3" role="alert"></div>
+    <div class="card">
+        <div class="card-header">
+            <i class="fa-solid fa-boxes-packing fa-lg me-2"></i>
+            <span>資産割り当て / 返却リクエスト</span>
+        </div>
+        <div class="card-body">
+            <!-- Function switch tabs -->
+            <ul class="nav nav-tabs mb-4" id="requestTypeTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="assign-tab" data-bs-toggle="tab" data-bs-target="#assign" type="button" role="tab">資産割り当て</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="return-tab" data-bs-toggle="tab" data-bs-target="#return" type="button" role="tab">資産返却</button>
+                </li>
+            </ul>
+            <form id="requestAssetForm" autocomplete="off">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                <!-- Employee autocomplete -->
+                <div class="mb-3 position-relative">
+                    <label class="form-label" for="employeeSelect"><i class="fa-solid fa-user me-1"></i>従業員</label>
+                    <select class="form-select" id="employeeSelect" name="employee_id" style="width:100%">
+                        <option value="">従業員を選択...</option>
+                        {% for emp in employee_list %}
+                        <option value="{{ emp.id }}">{{ emp.name }} ({{ emp.code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Asset Assignment -->
+                <div id="assignSection">
+                    <div class="mb-3">
+                        <label class="form-label" for="assetSelect"><i class="fa-solid fa-box-open me-1"></i>資産を割り当て</label>
+                        <select class="form-select" id="assetSelect" name="asset_id" style="width:100%">
+                            <option value="">資産を選択...</option>
+                            {% for asset in assets %}
+                            <option value="{{ asset.id }}">{{ asset.name }} ({{ asset.code }})</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" class="form-control mt-2 d-none" id="assetNameInput" name="asset_name" placeholder="新しい資産名を入力...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="notes"><i class="fa-solid fa-pen-to-square me-1"></i>メモ</label>
+                        <textarea class="form-control" name="notes" id="notes" rows="3" placeholder="メモまたは資産の説明を入力..."></textarea>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-primary" onclick="submitAssetRequest()" id="submitBtn">
+                            <i class="fas fa-paper-plane"></i> リクエスト送信
+                        </button>
+                    </div>
+                </div>
+                <!-- Asset Return -->
+                <div id="returnSection" class="d-none">
+                    <div class="mb-3">
+                        <label class="form-label" for="returnAssetSelect"><i class="fa-solid fa-box me-1"></i>返却する資産を選択</label>
+                        <select class="form-select" id="returnAssetSelect" name="return_asset_id" style="width:100%">
+                            <option value="">資産を選択...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="returnReasonSelect"><i class="fa-solid fa-question-circle me-1"></i>返却理由</label>
+                        <select class="form-select" id="returnReasonSelect" name="return_reason" style="width:100%">
+                            <option value="">理由を選択...</option>
+                            {% for reason in return_reasons %}
+                                <option value="{{ reason }}">{{ reason }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="returnNotesDetail"><i class="fa-solid fa-pen-to-square me-1"></i>詳細なメモ (オプション)</label>
+                        <textarea class="form-control" name="return_notes_detail" id="returnNotesDetail" rows="3" placeholder="返却に関する詳細なメモを入力..."></textarea>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-primary" onclick="submitReturnRequest()" id="returnBtn">
+                            <i class="fas fa-undo"></i> リクエスト送信
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="d-flex justify-content-end mt-3">
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-sign-out-alt"></i> ログアウト
+        </a>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
+<script>
+// eslint-disable-next-line
+let employeeList = {{ employee_list|tojson|safe }};
+
+// Thêm hàm validation
+function validateAssetRequest() {
+    if (!$('#employeeSelect').val()) {
+        showNotification('従業員を選択してからリクエストを送信してください', 'warning');
+        return false;
+    }
+    if (!$('#assetSelect').val() && !$('#assetNameInput').val()) {
+        showNotification('資産を選択するか、資産名を入力してください', 'warning');
+        return false;
+    }
+    if (!$('#notes').val()) {
+        showNotification('メモを入力してください', 'warning');
+        return false;
+    }
+    return true;
+}
+
+function validateReturnRequest() {
+    if (!$('#employeeSelect').val()) {
+        showNotification('従業員を選択してから返却リクエストを送信してください', 'warning');
+        return false;
+    }
+    if (!$('#returnAssetSelect').val()) {
+        showNotification('返却する資産を選択してください', 'warning');
+        return false;
+    }
+    if (!$('#returnReasonSelect').val()) {
+        showNotification('返却理由を選択してください', 'warning');
+        return false;
+    }
+    return true;
+}
+
+// Thêm hàm xử lý lỗi
+function handleApiError(error, defaultMessage) {
+    console.error('API Error:', error);
+    let errorMessage = defaultMessage;
+    if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+    }
+    showNotification(errorMessage, 'danger');
+}
+
+// Thêm hàm kiểm tra CSRF token
+function getCsrfToken() {
+    const token = $('input[name="csrf_token"]').val();
+    if (!token) {
+        showNotification('セキュリティトークンが見つかりません。ページを再読み込みしてください。', 'danger');
+        return null;
+    }
+    return token;
+}
+
+// Thêm hàm format date
+function formatDate(date) {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// Replace employeeList and autocomplete with Select2 AJAX
+$(document).ready(function() {
+    // Employee Select2
+    $('#employeeSelect').select2({
+        placeholder: '従業員を選択...',
+        allowClear: true,
+        width: '100%',
+        ajax: {
+            url: '/api/employees/active',
+            dataType: 'json',
+            delay: 250,
+            processResults: function (data) {
+                if (!data.success) return { results: [] };
+                return {
+                    results: data.employees.map(function(emp) {
+                        return {
+                            id: emp.id,
+                            text: emp.name + ' (' + emp.employee_code + ')',
+                            email: emp.email,
+                            department: emp.department
+                        };
+                    })
+                };
+            },
+            cache: true
+        },
+        templateResult: formatEmployeeOption,
+        templateSelection: formatEmployeeSelection,
+        escapeMarkup: function (markup) { return markup; },
+        language: {
+            searching: function() {
+                return '<span class="spinner-border spinner-border-sm text-primary me-2"></span> Đang tìm kiếm...';
+            }
+        }
+    });
+
+    // Asset Select2
+    $('#assetSelect').select2({
+        placeholder: '資産を選択...',
+        allowClear: true,
+        width: '100%'
+    });
+
+    // Return Asset Select2
+    $('#returnAssetSelect').select2({
+        placeholder: '資産を選択...',
+        allowClear: true,
+        width: '100%'
+    });
+
+    // Return Reason Select2
+    $('#returnReasonSelect').select2({
+        placeholder: '理由を選択...',
+        allowClear: true,
+        width: '100%'
+    });
+
+    // Tab switch
+    $('#requestTypeTabs button').on('click', function(e) {
+        if ($(this).attr('id') === 'assign-tab') {
+            $('#assignSection').removeClass('d-none');
+            $('#returnSection').addClass('d-none');
+        } else {
+            $('#assignSection').addClass('d-none');
+            $('#returnSection').removeClass('d-none');
+        }
+    });
+});
+
+function formatEmployeeOption(emp) {
+    if (!emp.id) return emp.text;
+    return `<div style='display:flex;flex-direction:column;'>
+        <span style='font-weight:600;'>${emp.text}</span>
+        <small style='color:#888;'>${emp.department ? emp.department + ' | ' : ''}${emp.email || ''}</small>
+    </div>`;
+}
+
+function formatEmployeeSelection(emp) {
+    return emp.text || '';
+}
+
+// When employee changes, update hidden field and load assets
+$('#employeeSelect').on('change', function() {
+    const empId = $(this).val();
+    if (empId) loadEmployeeAssets(empId);
+});
+
+// Load employee's current assets
+function loadEmployeeAssets(employeeId) {
+    if (!employeeId) {
+        $('#returnAssetSelect').empty().append('<option value="">資産を選択...</option>').trigger('change');
+        return;
+    }
+    // Show loading state
+    $('#returnAssetSelect').empty().append('<option value="">読み込み中...</option>').trigger('change');
+    $.ajax({
+        url: '/api/my-assets',
+        method: 'GET',
+        data: { employee_id: employeeId },
+        success: function(response) {
+            const select = $('#returnAssetSelect');
+            select.empty();
+            if (response.success && response.assets && response.assets.length > 0) {
+                select.append('<option value="">資産を選択...</option>');
+                response.assets.forEach(function(asset) {
+                    // Only show assets without pending return requests
+                    if (!asset.has_pending_return) {
+                        select.append(`<option value="${asset.assignment_id}">${asset.name} (${asset.asset_code})</option>`);
+                    }
+                });
+                // If no asset can be returned
+                if (select.find('option').length <= 1) {
+                    select.append('<option value="">返却可能な資産がありません</option>');
+                }
+            } else {
+                select.append('<option value="">資産が利用可能ではありません</option>');
+            }
+            select.trigger('change');
+        },
+        error: function(error) {
+            handleApiError(error, '資産リストの読み込みに失敗しました。もう一度お試しください。');
+            $('#returnAssetSelect').empty()
+                .append('<option value="">資産の読み込みに失敗しました。もう一度お試しください。</option>')
+                .trigger('change');
+        }
+    });
+}
+
+function showNotification(message, type) {
+    const notification = $('#notification');
+    notification.removeClass('d-none alert-success alert-danger alert-warning')
+        .addClass('alert-' + type)
+        .text(message);
+    setTimeout(function() { notification.addClass('d-none'); }, 5000);
+}
+
+function submitAssetRequest() {
+    if (!validateAssetRequest()) {
+        return;
+    }
+
+    // Disable submit button and show loading indicator
+    $('#submitBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 送信中...');
+
+    const form = $('#requestAssetForm')[0];
+    const formData = new FormData(form);
+
+    // Log form data for debugging
+    console.log('Form data before submit:');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+    }
+
+    // If 'other' is selected for asset, use the value from assetNameInput
+    if (formData.get('asset_id') === 'other') {
+        formData.delete('asset_id'); // Remove the 'other' value
+        // The asset_name field is already populated by assetNameInput
+    } else {
+        formData.delete('asset_name'); // Remove asset_name if an existing asset was selected
+    }
+
+    // Get CSRF token
+    const csrfToken = getCsrfToken();
+    if (!csrfToken) {
+        $('#submitBtn').prop('disabled', false).html('<i class="fas fa-paper-plane"></i> リクエスト送信');
+        return;
+    }
+    formData.append('csrf_token', csrfToken);
+
+    console.log('Sending request to /api/asset-requests');
+    fetch('/api/asset-requests', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        // Re-enable button
+        $('#submitBtn').prop('disabled', false).html('<i class="fas fa-paper-plane"></i> リクエスト送信');
+
+        if (data.success) {
+            showNotification(data.message || '資産リクエストが正常に送信されました！', 'success');
+            
+            // Reset form fields properly
+            console.log('Resetting form fields...');
+            $('#employeeSelect').val(null).trigger('change');
+            $('#assetSelect').val(null).trigger('change');
+            $('#assetNameInput').addClass('d-none').val('');
+            $('#notes').val('');
+            
+            // Clear return asset select
+            $('#returnAssetSelect').val(null).trigger('change');
+            
+            // Reload asset list
+            reloadAssetList();
+        } else {
+            console.log('Request failed:', data.message);
+            showNotification(data.message || '資産リクエストの送信に失敗しました。', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error submitting request:', error);
+        // Re-enable button
+        $('#submitBtn').prop('disabled', false).html('<i class="fas fa-paper-plane"></i> リクエスト送信');
+        handleApiError(error, 'リクエストの送信中にエラーが発生しました。');
+    });
+}
+
+function submitReturnRequest() {
+    if (!validateReturnRequest()) {
+        return;
+    }
+
+    // Disable submit button and show loading indicator
+    $('#returnBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 送信中...');
+
+    const assignmentId = $('#returnAssetSelect').val();
+    const reason = $('#returnReasonSelect').val();
+    const notesDetail = $('#returnNotesDetail').val();
+
+    const formData = new FormData();
+    formData.append('assignment_id', assignmentId);
+    formData.append('return_reason', reason);
+    formData.append('return_notes_detail', notesDetail);
+
+    // Log form data for debugging
+    console.log('Return request form data:');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+    }
+
+    // Get CSRF token
+    const csrfToken = getCsrfToken();
+    if (!csrfToken) {
+        $('#returnBtn').prop('disabled', false).html('<i class="fas fa-undo"></i> リクエスト送信');
+        return;
+    }
+    formData.append('csrf_token', csrfToken);
+
+    console.log('Sending request to /api/asset-return-requests');
+    fetch('/api/asset-return-requests', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        // Re-enable button
+        $('#returnBtn').prop('disabled', false).html('<i class="fas fa-undo"></i> リクエスト送信');
+
+        if (data.success) {
+            showNotification(data.message || '返却リクエストが正常に送信されました！', 'success');
+            
+            // Reset form fields properly
+            console.log('Resetting return form fields...');
+            $('#returnAssetSelect').val(null).trigger('change');
+            $('#returnReasonSelect').val(null).trigger('change');
+            $('#returnNotesDetail').val('');
+            
+            // Optionally reload the employee's asset list if they are on this page
+            const selectedEmployeeId = $('#employeeSelect').val();
+            if (selectedEmployeeId) {
+                loadEmployeeAssets(selectedEmployeeId);
+            }
+        } else {
+            console.log('Return request failed:', data.message);
+            showNotification(data.message || '返却リクエストの送信に失敗しました。', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error submitting return request:', error);
+        // Re-enable button
+        $('#returnBtn').prop('disabled', false).html('<i class="fas fa-undo"></i> リクエスト送信');
+        handleApiError(error, '返却リクエストの送信中にエラーが発生しました。');
+    });
+}
+
+// Add a function to reload the asset list dynamically
+function reloadAssetList() {
+    $.ajax({
+        url: '/api/assets',
+        method: 'GET',
+        success: function(response) {
+            const select = $('#assetSelect');
+            select.empty();
+            select.append('<option value="">資産を選択...</option>');
+            if (response.success && response.assets && response.assets.length > 0) {
+                response.assets.forEach(function(asset) {
+                    if (asset.status === 'Available' && asset.available_quantity > 0) {
+                        select.append(`<option value="${asset.id}">${asset.name} (${asset.asset_code})</option>`);
+                    }
+                });
+            } else {
+                select.append('<option value="">利用可能な資産がありません</option>');
+            }
+            select.trigger('change');
+        },
+        error: function(error) {
+            handleApiError(error, '資産リストの読み込みに失敗しました');
+            $('#assetSelect').empty().append('<option value="">資産リストの読み込みに失敗しました</option>').trigger('change');
+        }
+    });
+}
+</script>
+</body>
+</html> 

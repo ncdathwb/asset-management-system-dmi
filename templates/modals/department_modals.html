@@ -1,0 +1,60 @@
+<!-- Edit Department Modal -->
+{% if current_user.is_branch_admin() or current_user.is_super_admin() %}
+<div class="modal fade" id="editDepartmentModal" tabindex="-1" aria-labelledby="editDepartmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editDepartmentModalLabel">部門編集</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editDepartmentForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="id" id="editDepartmentId">
+                    <div class="mb-3">
+                        <label class="form-label" for="editDepartmentName">部門名</label>
+                        <input type="text" class="form-control" name="name" id="editDepartmentName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">支店</label>
+                        <input type="text" class="form-control" value="{% if current_user.branch == 'vietnam' %}ベトナム{% elif current_user.branch == 'japan' %}日本{% else %}{{ current_user.branch }}{% endif %}" readonly>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="submit" form="editDepartmentForm" class="btn btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Add Department Modal -->
+<div class="modal fade" id="addDepartmentModal" tabindex="-1" aria-labelledby="addDepartmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addDepartmentModalLabel">新規部門追加</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="departmentForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <div class="mb-3">
+                        <label class="form-label" for="departmentName">部門名</label>
+                        <input type="text" class="form-control" name="name" id="departmentName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">支店</label>
+                        <input type="text" class="form-control" value="{% if current_user.branch == 'vietnam' %}ベトナム{% elif current_user.branch == 'japan' %}日本{% else %}{{ current_user.branch }}{% endif %}" readonly>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                <button type="submit" form="departmentForm" class="btn btn-primary">追加</button>
+            </div>
+        </div>
+    </div>
+</div> 
