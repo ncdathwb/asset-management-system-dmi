@@ -49,10 +49,21 @@ def create_initial_accounts():
             created_at=datetime.now()
         )
         
+        # Tạo tài khoản Employee
+        employee = User(
+            username='employee',
+            password_hash=generate_password_hash('employee123'),
+            email='employee@dmi.com',
+            role='employee',
+            branch='vietnam',
+            created_at=datetime.now()
+        )
+        
         try:
             # Thêm vào database
             db.session.add(super_admin)
             db.session.add(branch_admin)
+            db.session.add(employee)
             db.session.commit()
             
             print("✅ Tạo tài khoản thành công!")
@@ -69,6 +80,12 @@ def create_initial_accounts():
             print("   Password: manager123")
             print("   Email: manager@dmi.com")
             print("   Role: Branch Admin")
+            print()
+            print("3. Employee (Vietnam):")
+            print("   Username: employee")
+            print("   Password: employee123")
+            print("   Email: employee@dmi.com")
+            print("   Role: Employee")
             print("=" * 50)
             print("\n🔗 Truy cập: https://asset-management-system-dmi.onrender.com")
             
