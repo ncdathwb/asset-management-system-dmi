@@ -414,7 +414,7 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         # branch = request.form.get('branch')  # Không lấy từ form nữa
-        branch = 'vietnam'  # Luôn gán là vietnam
+        branch = request.form.get('branch', 'vietnam')  # Luôn gán là vietnam
         remember = request.form.get('remember') == 'on'
 
         user = User.query.filter_by(username=username, branch=branch).first()
