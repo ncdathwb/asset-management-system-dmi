@@ -5,6 +5,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_babel import Babel, gettext as _, lazy_gettext as _l, Locale
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from datetime import datetime, timedelta
 from flask_paginate import Pagination, get_page_parameter
 import pytz
