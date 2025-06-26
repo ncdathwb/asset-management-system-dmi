@@ -18,7 +18,7 @@ from app import app, db
 from models import User
 
 def create_initial_accounts():
-    """Tạo 3 tài khoản admin đầu tiên"""
+    """Tạo 3 tài khoản admin đầu tiên (chỉ branch vietnam)"""
     
     with app.app_context():
         # Tạo database tables nếu chưa có
@@ -40,7 +40,7 @@ def create_initial_accounts():
             password_hash=generate_password_hash('manager123'),
             email='manager@dmi.com',
             role='branch_admin',
-            branch='japan',
+            branch='vietnam',
             created_at=datetime.now()
         )
         
@@ -70,7 +70,7 @@ def create_initial_accounts():
             print("   Email: admin@dmi.com")
             print("   Role: Super Admin")
             print()
-            print("2. Branch Admin (Japan):")
+            print("2. Branch Admin (Vietnam):")
             print("   Username: manager")
             print("   Password: manager123")
             print("   Email: manager@dmi.com")
@@ -140,7 +140,7 @@ def show_branch_menu():
         print("❌ Lựa chọn không hợp lệ. Vui lòng chọn 1-2.")
 
 def create_account_interactive():
-    """Tạo tài khoản mới với menu chọn"""
+    """Tạo tài khoản mới với branch vietnam"""
     with app.app_context():
         print("\n" + "=" * 50)
         print("➕ TẠO TÀI KHOẢN MỚI")
@@ -158,7 +158,7 @@ def create_account_interactive():
         role = show_role_menu()
         
         # Chọn branch từ menu  
-        branch = show_branch_menu()
+        branch = 'vietnam'
         
         # Kiểm tra username/email đã tồn tại chưa
         if User.query.filter_by(username=username).first():
