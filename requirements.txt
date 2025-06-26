@@ -10,3 +10,4 @@ flask-paginate
 Flask-Migrate
 gunicorn
 Flask-Babel
+psycopg2-binary
