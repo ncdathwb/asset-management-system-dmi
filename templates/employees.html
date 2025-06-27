@@ -319,9 +319,12 @@ $(document).ready(function() {
     // Department filter (cột phòng ban là index 3)
     $('#departmentFilter').change(function() {
         var value = $(this).val();
+        console.log('Department filter value:', value);
         $("table tbody tr").filter(function() {
             if (!value) return $(this).show();
-            $(this).toggle($(this).find('td:eq(3)').text().trim() === value);
+            var rowDepartment = $(this).find('td:eq(3)').text().trim();
+            console.log('Row department:', rowDepartment, 'Filter value:', value, 'Match:', rowDepartment === value);
+            $(this).toggle(rowDepartment === value);
         });
     });
 
