@@ -117,6 +117,8 @@ function loadDepartments(page = 1) {
     $.get(`/api/settings/departments?page=${page}`, function(data) {
         const tbody = $('#departmentsTable tbody');
         tbody.empty();
+        const maxRows = 5;
+        let count = 0;
         if (data.success && Array.isArray(data.departments)) {
             data.departments.forEach(dept => {
                 const branchJP = dept.branch === 'vietnam' ? 'ベトナム' : (dept.branch === 'japan' ? '日本' : dept.branch);
@@ -126,18 +128,22 @@ function loadDepartments(page = 1) {
                         <td>${branchJP}</td>
                         <td>
                             ${isBranchAdmin ? `
-                                <button class="btn btn-sm btn-primary" onclick="editDepartment(${dept.id}, '${dept.name}')">
-                                    <i class="fas fa-edit"></i>
+                                <button class=\"btn btn-sm btn-primary\" onclick=\"editDepartment(${dept.id}, '${dept.name}')\">
+                                    <i class=\"fas fa-edit\"></i>
                                 </button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteDepartment(${dept.id}, '${dept.name}', this)">
-                                    <i class="fas fa-trash"></i>
+                                <button class=\"btn btn-sm btn-danger\" onclick=\"deleteDepartment(${dept.id}, '${dept.name}', this)\">
+                                    <i class=\"fas fa-trash\"></i>
                                 </button>
                             ` : ''}
                         </td>
                     </tr>
                 `;
                 tbody.append(row);
+                count++;
             });
+        }
+        for (let i = count; i < maxRows; i++) {
+            tbody.append('<tr><td colspan="3">&nbsp;</td></tr>');
         }
         renderPagination('#departmentsPagination', data.page, data.pages, loadDepartments);
     });
@@ -287,6 +293,8 @@ function loadAssetTypes(page = 1) {
     $.get(`/api/settings/asset-types?page=${page}`, function(data) {
         const tbody = $('#assetTypesTable tbody');
         tbody.empty();
+        const maxRows = 5;
+        let count = 0;
         if (data.success && Array.isArray(data.asset_types)) {
             data.asset_types.forEach(type => {
                 const branchJP = type.branch === 'vietnam' ? 'ベトナム' : (type.branch === 'japan' ? '日本' : type.branch);
@@ -297,18 +305,22 @@ function loadAssetTypes(page = 1) {
                         <td>${branchJP}</td>
                         <td>
                             ${isBranchAdmin ? `
-                                <button class="btn btn-sm btn-primary" onclick="editAssetType(${type.id}, '${safeTypeName}')">
-                                    <i class="fas fa-edit"></i>
+                                <button class=\"btn btn-sm btn-primary\" onclick=\"editAssetType(${type.id}, '${safeTypeName}')\">
+                                    <i class=\"fas fa-edit\"></i>
                                 </button>
-                                <button class="btn btn-sm btn-danger" onclick="confirmDeleteAssetType(${type.id}, '${safeTypeName}')">
-                                    <i class="fas fa-trash"></i>
+                                <button class=\"btn btn-sm btn-danger\" onclick=\"confirmDeleteAssetType(${type.id}, '${safeTypeName}')\">
+                                    <i class=\"fas fa-trash\"></i>
                                 </button>
                             ` : ''}
                         </td>
                     </tr>
                 `;
                 tbody.append(row);
+                count++;
             });
+        }
+        for (let i = count; i < maxRows; i++) {
+            tbody.append('<tr><td colspan="3">&nbsp;</td></tr>');
         }
         renderPagination('#assetTypesPagination', data.page, data.pages, loadAssetTypes);
     });
