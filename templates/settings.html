@@ -126,13 +126,22 @@
 
 /* Custom pagination styles */
 .settings-table-container {
-    min-height: 260px;
+    min-height: 300px;
+    height: 300px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
 }
 .settings-table-container .table-responsive {
     flex: 1 1 auto;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+.settings-table-container table {
+    flex: 1 1 auto;
+    height: 100%;
 }
 .settings-table-container .custom-pagination {
     margin-top: auto;
