@@ -113,8 +113,8 @@ function initDepartmentModals() {
     });
 }
 
-function loadDepartments() {
-    $.get('/api/settings/departments', function(data) {
+function loadDepartments(page = 1) {
+    $.get(`/api/settings/departments?page=${page}`, function(data) {
         const tbody = $('#departmentsTable tbody');
         tbody.empty();
         if (data.success && Array.isArray(data.departments)) {
@@ -139,6 +139,7 @@ function loadDepartments() {
                 tbody.append(row);
             });
         }
+        renderPagination('#departmentsPagination', data.page, data.pages, loadDepartments);
     });
 }
 
@@ -282,14 +283,13 @@ function initAssetTypeModals() {
     });
 }
 
-function loadAssetTypes() {
-    $.get('/api/settings/asset-types', function(data) {
+function loadAssetTypes(page = 1) {
+    $.get(`/api/settings/asset-types?page=${page}`, function(data) {
         const tbody = $('#assetTypesTable tbody');
         tbody.empty();
         if (data.success && Array.isArray(data.asset_types)) {
             data.asset_types.forEach(type => {
                 const branchJP = type.branch === 'vietnam' ? 'ベトナム' : (type.branch === 'japan' ? '日本' : type.branch);
-                // Escape single quotes in type.name to prevent JS errors
                 const safeTypeName = type.name.replace(/'/g, "\\'");
                 const row = `
                     <tr>
@@ -310,6 +310,7 @@ function loadAssetTypes() {
                 tbody.append(row);
             });
         }
+        renderPagination('#assetTypesPagination', data.page, data.pages, loadAssetTypes);
     });
 }
 
@@ -391,4 +392,26 @@ $('#addDepartmentModal, #editDepartmentModal, #addAssetTypeModal, #editAssetType
             document.body.focus();
         }
     }
-}); 
+});
+
+function renderPagination(containerSelector, currentPage, totalPages, onPageChange) {
+    const container = $(containerSelector);
+    container.empty();
+    if (totalPages <= 1) return;
+    let html = '';
+    html += `<nav><ul class="pagination pagination-sm mb-0">`;
+    html += `<li class="page-item${currentPage === 1 ? ' disabled' : ''}"><a class="page-link" href="#" data-page="${currentPage - 1}">«</a></li>`;
+    for (let i = 1; i <= totalPages; i++) {
+        html += `<li class="page-item${i === currentPage ? ' active' : ''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+    }
+    html += `<li class="page-item${currentPage === totalPages ? ' disabled' : ''}"><a class="page-link" href="#" data-page="${currentPage + 1}">»</a></li>`;
+    html += `</ul></nav>`;
+    container.html(html);
+    container.find('a.page-link').click(function(e) {
+        e.preventDefault();
+        const page = parseInt($(this).data('page'));
+        if (!isNaN(page) && page >= 1 && page <= totalPages && page !== currentPage) {
+            onPageChange(page);
+        }
+    });
+} 

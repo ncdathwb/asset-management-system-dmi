@@ -883,10 +883,17 @@ def add_department():
 @login_required
 def get_departments():
     try:
-        departments = Department.query.filter_by(branch=session.get('branch')).all()
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 10))
+        pagination = Department.query.filter_by(branch=session.get('branch')).order_by(Department.id).paginate(page=page, per_page=per_page, error_out=False)
+        departments = pagination.items
         return jsonify({
             'success': True,
-            'departments': [{'id': dept.id, 'name': dept.name, 'branch': dept.branch} for dept in departments]
+            'departments': [{'id': dept.id, 'name': dept.name, 'branch': dept.branch} for dept in departments],
+            'total': pagination.total,
+            'pages': pagination.pages,
+            'page': page,
+            'per_page': per_page
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
@@ -1678,12 +1685,19 @@ def get_asset_types():
     if not (current_user.is_super_admin() or current_user.is_branch_admin()):
         return jsonify({'success': False, 'message': 'Unauthorized'})
     try:
-        asset_types = AssetType.query.all()
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 10))
+        pagination = AssetType.query.order_by(AssetType.id).paginate(page=page, per_page=per_page, error_out=False)
+        asset_types = pagination.items
         return jsonify({
             'success': True,
             'asset_types': [
                 {'id': t.id, 'name': t.name, 'branch': t.branch} for t in asset_types
-            ]
+            ],
+            'total': pagination.total,
+            'pages': pagination.pages,
+            'page': page,
+            'per_page': per_page
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
