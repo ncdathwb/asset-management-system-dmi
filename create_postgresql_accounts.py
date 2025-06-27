@@ -10,6 +10,8 @@ import sys
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 import getpass
+from dotenv import load_dotenv
+load_dotenv()
 
 # Thêm thư mục hiện tại vào Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))

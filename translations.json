@@ -1,6 +1,6 @@
 {
   "department": {
-    "Back Office": {
+    "BACK OFFICE": {
       "ja": "バックオフィス",
       "en": "Back Office",
       "vi": "Văn phòng"
@@ -34,11 +34,6 @@
       "ja": "SCOPE",
       "en": "SCOPE",
       "vi": "SCOPE"
-    },
-    "a": {
-      "ja": "ax",
-      "en": "ax",
-      "vi": "ã"
     }
   },
   "status": {
