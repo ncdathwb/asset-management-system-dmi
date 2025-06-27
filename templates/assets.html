@@ -582,8 +582,8 @@ function updatePaginationLinks(total, currentPage, perPage, totalPages) {
 
     var paginationHtml = '<ul class="pagination justify-content-center">';
 
-    // Previous button
-    paginationHtml += '<li class="' + (currentPage === 1 ? 'disabled' : '') +'"><a class="page-link" href="?page='+ (currentPage - 1) +'&per_page='+ perPage +'" tabIndex="-1">前へ</a></li>';
+    // Previous button (dùng &laquo;)
+    paginationHtml += '<li class="' + (currentPage === 1 ? 'disabled' : '') +'"><a class="page-link" href="?page='+ (currentPage - 1) +'&per_page='+ perPage + '" tabIndex="-1">&laquo;</a></li>';
 
     // Logic giống nhân viên: outer_window=1, inner_window=2
     const inner_window = 2;
@@ -608,8 +608,8 @@ function updatePaginationLinks(total, currentPage, perPage, totalPages) {
         lastPage = pages[i];
     }
 
-    // Next button
-    paginationHtml += '<li class="' + (currentPage === totalPages ? 'disabled' : '') +'"><a class="page-link" href="?page='+ (currentPage + 1) +'&per_page='+ perPage +'">次へ</a></li>';
+    // Next button (dùng &raquo;)
+    paginationHtml += '<li class="' + (currentPage === totalPages ? 'disabled' : '') +'"><a class="page-link" href="?page='+ (currentPage + 1) +'&per_page='+ perPage +'">&raquo;</a></li>';
     paginationHtml += '</ul>';
     paginationContainer.html(paginationHtml);
 }
