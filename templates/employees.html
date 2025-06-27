@@ -23,7 +23,7 @@
                     <select class="form-select" id="departmentFilter">
                         <option value="">すべての部署</option>
                         {% for dept in departments %}
-                        <option value="{{ dept.name }}">{{ dept.jp }}</option>
+                        <option value="{{ dept.jp }}">{{ dept.jp }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -321,7 +321,7 @@ $(document).ready(function() {
         var value = $(this).val();
         $("table tbody tr").filter(function() {
             if (!value) return $(this).show();
-            $(this).toggle($(this).find('td:eq(3)').text().indexOf(value) > -1);
+            $(this).toggle($(this).find('td:eq(3)').text().trim() === value);
         });
     });
 
