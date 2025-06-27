@@ -550,6 +550,17 @@ function loadAssets(page = 1) {
                     tableBody.append(row);
                 });
 
+                // Thêm dòng trống nếu chưa đủ per_page
+                let perPage = response.per_page || 5; // fallback nếu API không trả về
+                let emptyRows = perPage - response.assets.length;
+                for (let i = 0; i < emptyRows; i++) {
+                    let emptyRow = $('<tr>');
+                    for (let j = 0; j < 8; j++) { // 8 là số cột
+                        emptyRow.append($('<td>&nbsp;</td>'));
+                    }
+                    tableBody.append(emptyRow);
+                }
+
                 // Update pagination links
                 updatePaginationLinks(response.total, response.page, response.per_page, response.pages);
 
