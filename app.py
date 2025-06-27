@@ -509,7 +509,8 @@ def employees():
                          departments=departments_jp,
                          pagination=pagination,
                          selected_department=department_filter,
-                         search_value=search_filter)
+                         search_value=search_filter,
+                         per_page=per_page)
 
 @app.route('/assets')
 @login_required
