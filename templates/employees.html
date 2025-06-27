@@ -17,7 +17,7 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-3">
-                    <input type="text" class="form-control" id="searchInput" placeholder="従業員コードで検索......">
+                    <input type="text" class="form-control" id="searchInput" placeholder="従業員コードで検索......" value="{{ search_value or '' }}">
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" id="departmentFilter">
@@ -299,12 +299,23 @@ $(document).ready(function() {
         }
     });
 
-    // Search functionality
+    // Search functionality - server-side
     $('#searchInput').on('keyup', function() {
-        var value = $(this).val().toLowerCase();
-        $("table tbody tr").filter(function() {
-            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
-        });
+        var value = $(this).val();
+        var currentUrl = new URL(window.location);
+        
+        if (value) {
+            currentUrl.searchParams.set('search', value);
+        } else {
+            currentUrl.searchParams.delete('search');
+        }
+        currentUrl.searchParams.delete('page'); // Reset về trang 1 khi search
+        
+        // Debounce để tránh gọi quá nhiều request
+        clearTimeout(window.searchTimeout);
+        window.searchTimeout = setTimeout(function() {
+            window.location.href = currentUrl.toString();
+        }, 500);
     });
 
     // Status filter (cột trạng thái là index 4)
@@ -321,19 +332,18 @@ $(document).ready(function() {
         var value = $(this).val();
         console.log('Department filter value:', value);
         
+        var currentUrl = new URL(window.location);
+        
         // Nếu có chọn phòng ban, reload trang với parameter
         if (value) {
-            var currentUrl = new URL(window.location);
             currentUrl.searchParams.set('department', value);
-            currentUrl.searchParams.delete('page'); // Reset về trang 1
-            window.location.href = currentUrl.toString();
         } else {
             // Nếu chọn "tất cả", xóa parameter department
-            var currentUrl = new URL(window.location);
             currentUrl.searchParams.delete('department');
-            currentUrl.searchParams.delete('page'); // Reset về trang 1
-            window.location.href = currentUrl.toString();
         }
+        currentUrl.searchParams.delete('page'); // Reset về trang 1
+        // Giữ nguyên search parameter nếu có
+        window.location.href = currentUrl.toString();
     });
 
     // Test click handler

@@ -457,8 +457,9 @@ def employees():
     page = request.args.get(get_page_parameter(), type=int, default=1)
     per_page = 5
     
-    # Lấy parameter department filter
+    # Lấy parameter department filter và search
     department_filter = request.args.get('department', '').strip()
+    search_filter = request.args.get('search', '').strip()
     
     query = Employee.query.filter_by(branch=session.get('branch'))
     
@@ -474,6 +475,14 @@ def employees():
         
         if original_department:
             query = query.filter(Employee.department == original_department)
+    
+    # Áp dụng search nếu có
+    if search_filter:
+        query = query.filter(
+            (Employee.employee_code.ilike(f'%{search_filter}%')) |
+            (Employee.name.ilike(f'%{search_filter}%')) |
+            (Employee.email.ilike(f'%{search_filter}%'))
+        )
     
     total = query.count()
     
@@ -499,7 +508,8 @@ def employees():
                          employees=employees,
                          departments=departments_jp,
                          pagination=pagination,
-                         selected_department=department_filter)
+                         selected_department=department_filter,
+                         search_value=search_filter)
 
 @app.route('/assets')
 @login_required
