@@ -455,7 +455,7 @@ def employees():
     if not (current_user.is_branch_admin() or current_user.is_super_admin()):
         return redirect(url_for('employee_asset_request'))
     page = request.args.get(get_page_parameter(), type=int, default=1)
-    per_page = 10
+    per_page = 5
     
     query = Employee.query.filter_by(branch=session.get('branch'))
     total = query.count()
@@ -507,7 +507,7 @@ def assets():
         type_ = request.args.get('type', '').strip()
         status = request.args.get('status', '').strip()
         page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 10))
+        per_page = 5
 
         query = Asset.query.filter_by(branch=session.get('branch'))
         if search:
@@ -884,7 +884,7 @@ def add_department():
 def get_departments():
     try:
         page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 10))
+        per_page = 5
         pagination = Department.query.filter_by(branch=session.get('branch')).order_by(Department.id).paginate(page=page, per_page=per_page, error_out=False)
         departments = pagination.items
         return jsonify({
@@ -1099,7 +1099,7 @@ def get_asset_requests():
         
         # Get pagination parameters
         page = request.args.get(get_page_parameter(), type=int, default=1)
-        per_page = int(request.args.get('per_page', 10)) # Allow per_page via query param
+        per_page = 5
 
         # Get search query parameter
         search_query = request.args.get('search_query')
@@ -1375,7 +1375,7 @@ def get_return_requests():
 
         # Get pagination parameters
         page = request.args.get(get_page_parameter(), type=int, default=1)
-        per_page = int(request.args.get('per_page', 10))
+        per_page = 5
         
         # Nếu là admin, lấy tất cả yêu cầu
         if current_user.is_branch_admin() or current_user.is_super_admin():
@@ -1686,7 +1686,7 @@ def get_asset_types():
         return jsonify({'success': False, 'message': 'Unauthorized'})
     try:
         page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 10))
+        per_page = 5
         pagination = AssetType.query.order_by(AssetType.id).paginate(page=page, per_page=per_page, error_out=False)
         asset_types = pagination.items
         return jsonify({
@@ -2046,7 +2046,7 @@ def get_assignment_history():
 
         # Get pagination parameters
         page = request.args.get(get_page_parameter(), type=int, default=1)
-        per_page = int(request.args.get('per_page', 10)) # Allow per_page via query param
+        per_page = 5
 
         # Bắt đầu query
         assignment_history_query = db.session.query(

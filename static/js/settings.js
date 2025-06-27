@@ -399,7 +399,7 @@ function renderPagination(containerSelector, currentPage, totalPages, onPageChan
     container.empty();
     if (totalPages <= 1) return;
     let html = '';
-    html += `<nav><ul class="pagination pagination-sm mb-0">`;
+    html += `<nav><ul class="pagination pagination-sm mb-0 custom-pagination">`;
     html += `<li class="page-item${currentPage === 1 ? ' disabled' : ''}"><a class="page-link" href="#" data-page="${currentPage - 1}">«</a></li>`;
     for (let i = 1; i <= totalPages; i++) {
         html += `<li class="page-item${i === currentPage ? ' active' : ''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
