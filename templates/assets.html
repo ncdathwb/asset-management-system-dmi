@@ -585,38 +585,31 @@ function updatePaginationLinks(total, currentPage, perPage, totalPages) {
     // Previous button
     paginationHtml += '<li class="' + (currentPage === 1 ? 'disabled' : '') +'"><a class="page-link" href="?page='+ (currentPage - 1) +'&per_page='+ perPage +'" tabIndex="-1">前へ</a></li>';
 
-    // Page numbers
-    // We'll show a limited range of pages around the current page
-    const maxPagesToShow = 5; // Number of page links to show at once
-    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
-    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+    // Logic giống nhân viên: outer_window=1, inner_window=2
+    const inner_window = 2;
+    const outer_window = 1;
+    let startPage = Math.max(1, currentPage - inner_window);
+    let endPage = Math.min(totalPages, currentPage + inner_window);
 
-    // Adjust startPage if endPage is adjusted due to totalPages
-    if (endPage - startPage + 1 < maxPagesToShow) {
-        startPage = Math.max(1, endPage - maxPagesToShow + 1);
-    }
+    // Đảm bảo luôn hiển thị outer_window trang đầu/cuối
+    let pages = [];
+    for (let i = 1; i <= Math.min(outer_window, totalPages); i++) pages.push(i);
+    for (let i = startPage; i <= endPage; i++) if (!pages.includes(i) && i >= 1 && i <= totalPages) pages.push(i);
+    for (let i = totalPages - outer_window + 1; i <= totalPages; i++) if (!pages.includes(i) && i >= 1) pages.push(i);
+    pages = pages.filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
 
-    // First page and ellipsis
-    if (startPage > 1) {
-        paginationHtml += '<li class="page-item"><a class="page-link" href="?page=1&per_page='+ perPage +'">1</a></li>';
-        if (startPage > 2) {
+    // Render pages with ellipsis
+    let lastPage = 0;
+    for (let i = 0; i < pages.length; i++) {
+        if (pages[i] - lastPage > 1) {
             paginationHtml += '<li class="page-item disabled"><span class="page-link">...</span></li>';
         }
+        paginationHtml += '<li class="page-item' + (pages[i] === currentPage ? ' active' : '') +'"><a class="page-link" href="?page='+ pages[i] +'&per_page='+ perPage +'">'+ pages[i] +'</a></li>';
+        lastPage = pages[i];
     }
 
-    // Pages in range
-    for (let i = startPage; i <= endPage; i++) {
-        paginationHtml += '<li class="' + (i === currentPage ? 'active' : '') +'"><a class="page-link" href="?page='+ i +'&per_page='+ perPage +'">'+ i +'</a></li>';
-    }
-
-    // Last page and ellipsis
-    if (endPage < totalPages) {
-        if (endPage < totalPages - 1) {
-            paginationHtml += '<li class="page-item disabled"><span class="page-link">...</span></li>';
-        }
-        paginationHtml += '<li class="page-item"><a class="page-link" href="?page='+ totalPages +'&per_page='+ perPage +'">'+ totalPages +'</a></li>';
-    }
-
+    // Next button
+    paginationHtml += '<li class="' + (currentPage === totalPages ? 'disabled' : '') +'"><a class="page-link" href="?page='+ (currentPage + 1) +'&per_page='+ perPage +'">次へ</a></li>';
     paginationHtml += '</ul>';
     paginationContainer.html(paginationHtml);
 }
