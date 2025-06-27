@@ -501,8 +501,14 @@ def employees():
         emp.department_jp = translate(emp.department, 'department', 'ja')
         emp.status_jp = translate(emp.status, 'status', 'ja')
     
-    pagination = Pagination(page=page, total=total, per_page=per_page,
-                          css_framework='bootstrap4')
+    pagination = Pagination(
+        page=page,
+        total=total,
+        per_page=per_page,
+        css_framework='bootstrap4',
+        inner_window=2,   # Số trang lân cận trang hiện tại
+        outer_window=1    # Số trang đầu/cuối luôn hiển thị
+    )
     
     return render_template('employees.html',
                          employees=employees,
