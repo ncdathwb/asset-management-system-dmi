@@ -42,7 +42,7 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
-# Babel configuration
+# Babel configuration for translation
 app.config['BABEL_DEFAULT_LOCALE'] = 'ja'
 app.config['BABEL_TRANSLATION_DIRECTORIES'] = 'translations'
 babel = Babel(app)

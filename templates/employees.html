@@ -91,6 +91,11 @@
                             </td>
                         </tr>
                         {% endfor %}
+                        {% for i in range(per_page - employees|length) %}
+                        <tr>
+                            <td colspan="6">&nbsp;</td>
+                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
