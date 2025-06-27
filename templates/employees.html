@@ -23,7 +23,7 @@
                     <select class="form-select" id="departmentFilter">
                         <option value="">すべての部署</option>
                         {% for dept in departments %}
-                        <option value="{{ dept.jp }}">{{ dept.jp }}</option>
+                        <option value="{{ dept.name }}">{{ dept.jp }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -307,23 +307,21 @@ $(document).ready(function() {
         });
     });
 
-    // Tạo map từ jp về name gốc (render từ backend)
-    const departmentMap = { {% for dept in departments %}"{{ dept.jp }}": "{{ dept.name }}"{% if not loop.last %}, {% endif %}{% endfor %} };
-    $('#departmentFilter').on('change', function() {
-        var value = $(this).val();
-        if (departmentMap[value]) {
-            value = departmentMap[value];
-            $(this).val(value);
-        }
-        // ... filter bảng như cũ với value là tên gốc ...
-    });
-
     // Status filter (cột trạng thái là index 4)
     $('#statusFilter').change(function() {
         var value = $(this).val();
         $("table tbody tr").filter(function() {
             if (!value) return $(this).show();
             $(this).toggle($(this).find('td:eq(4)').text().indexOf(value) > -1);
+        });
+    });
+
+    // Department filter (cột phòng ban là index 3)
+    $('#departmentFilter').change(function() {
+        var value = $(this).val();
+        $("table tbody tr").filter(function() {
+            if (!value) return $(this).show();
+            $(this).toggle($(this).find('td:eq(3)').text().indexOf(value) > -1);
         });
     });
 
