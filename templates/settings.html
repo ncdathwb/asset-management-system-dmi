@@ -25,17 +25,19 @@
                     </button>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table align-middle" id="departmentsTable">
-                            <thead>
-                                <tr>
-                                    <th>部署名</th>
-                                    <th>支店</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                    <div class="settings-table-container">
+                        <div class="table-responsive">
+                            <table class="table align-middle" id="departmentsTable">
+                                <thead>
+                                    <tr>
+                                        <th>部署名</th>
+                                        <th>支店</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                         <div id="departmentsPagination" class="mt-2"></div>
                     </div>
                 </div>
@@ -51,17 +53,19 @@
                     </button>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table align-middle" id="assetTypesTable">
-                            <thead>
-                                <tr>
-                                    <th>資産タイプ名</th>
-                                    <th>支店</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                    <div class="settings-table-container">
+                        <div class="table-responsive">
+                            <table class="table align-middle" id="assetTypesTable">
+                                <thead>
+                                    <tr>
+                                        <th>資産タイプ名</th>
+                                        <th>支店</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                         <div id="assetTypesPagination" class="mt-2"></div>
                     </div>
                 </div>
@@ -121,31 +125,54 @@
 }
 
 /* Custom pagination styles */
+.settings-table-container {
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+.settings-table-container .table-responsive {
+    flex: 1 1 auto;
+}
+.settings-table-container .custom-pagination {
+    margin-top: auto;
+    text-align: center;
+}
+/* Nâng cấp nút phân trang đẹp hơn */
 .custom-pagination .page-link {
     border-radius: 50% !important;
-    margin: 0 2px;
+    margin: 0 4px;
     color: #007bff;
-    border: 1px solid #007bff;
+    border: 1.5px solid #007bff;
     background: #fff;
-    transition: background 0.2s, color 0.2s;
+    font-weight: 500;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,123,255,0.07);
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
 }
 .custom-pagination .page-item.active .page-link {
-    background: #007bff;
+    background: linear-gradient(135deg, #007bff 60%, #00c6ff 100%);
     color: #fff;
     border-color: #007bff;
     font-weight: bold;
-    box-shadow: 0 2px 8px rgba(0,123,255,0.15);
+    box-shadow: 0 2px 12px rgba(0,123,255,0.18);
 }
 .custom-pagination .page-link:hover {
     background: #e6f0ff;
     color: #0056b3;
     border-color: #0056b3;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.10);
 }
 .custom-pagination .page-item.disabled .page-link {
     color: #ccc;
     background: #f8f9fa;
     border-color: #dee2e6;
     cursor: not-allowed;
+    box-shadow: none;
 }
 </style>
 {% endblock %}
