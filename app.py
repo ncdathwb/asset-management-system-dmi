@@ -457,7 +457,24 @@ def employees():
     page = request.args.get(get_page_parameter(), type=int, default=1)
     per_page = 5
     
+    # Lấy parameter department filter
+    department_filter = request.args.get('department', '').strip()
+    
     query = Employee.query.filter_by(branch=session.get('branch'))
+    
+    # Áp dụng filter phòng ban nếu có
+    if department_filter:
+        # Tìm tên gốc từ tên tiếng Nhật
+        original_department = None
+        departments = Department.query.filter_by(branch=session.get('branch')).all()
+        for dept in departments:
+            if translate(dept.name, 'department', 'ja') == department_filter:
+                original_department = dept.name
+                break
+        
+        if original_department:
+            query = query.filter(Employee.department == original_department)
+    
     total = query.count()
     
     employees = query.order_by(Employee.employee_code).\
@@ -481,7 +498,8 @@ def employees():
     return render_template('employees.html',
                          employees=employees,
                          departments=departments_jp,
-                         pagination=pagination)
+                         pagination=pagination,
+                         selected_department=department_filter)
 
 @app.route('/assets')
 @login_required

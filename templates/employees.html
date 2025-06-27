@@ -23,7 +23,7 @@
                     <select class="form-select" id="departmentFilter">
                         <option value="">すべての部署</option>
                         {% for dept in departments %}
-                        <option value="{{ dept.jp }}">{{ dept.jp }}</option>
+                        <option value="{{ dept.jp }}" {% if selected_department == dept.jp %}selected{% endif %}>{{ dept.jp }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -320,12 +320,20 @@ $(document).ready(function() {
     $('#departmentFilter').change(function() {
         var value = $(this).val();
         console.log('Department filter value:', value);
-        $("table tbody tr").filter(function() {
-            if (!value) return $(this).show();
-            var rowDepartment = $(this).find('td:eq(3)').text().trim();
-            console.log('Row department:', rowDepartment, 'Filter value:', value, 'Match:', rowDepartment === value);
-            $(this).toggle(rowDepartment === value);
-        });
+        
+        // Nếu có chọn phòng ban, reload trang với parameter
+        if (value) {
+            var currentUrl = new URL(window.location);
+            currentUrl.searchParams.set('department', value);
+            currentUrl.searchParams.delete('page'); // Reset về trang 1
+            window.location.href = currentUrl.toString();
+        } else {
+            // Nếu chọn "tất cả", xóa parameter department
+            var currentUrl = new URL(window.location);
+            currentUrl.searchParams.delete('department');
+            currentUrl.searchParams.delete('page'); // Reset về trang 1
+            window.location.href = currentUrl.toString();
+        }
     });
 
     // Test click handler
