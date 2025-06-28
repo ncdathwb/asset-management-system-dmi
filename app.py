@@ -18,6 +18,32 @@ import sys
 import logging
 from sqlalchemy import case
 from utils import translate
+import time
+from sqlalchemy.exc import OperationalError, DisconnectionError
+from functools import wraps
+
+def retry_on_db_error(max_retries=3, delay=1):
+    """Decorator để retry khi gặp lỗi kết nối database"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except (OperationalError, DisconnectionError) as e:
+                    if attempt == max_retries - 1:
+                        # Lần cuối cùng, raise exception
+                        raise e
+                    else:
+                        # Log lỗi và thử lại
+                        logging.warning(f"Database connection error on attempt {attempt + 1}: {e}")
+                        time.sleep(delay * (attempt + 1))  # Exponential backoff
+                        # Đóng session cũ và tạo session mới
+                        db.session.remove()
+                        db.session.rollback()
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 def get_db_connection():
     import sqlite3
@@ -31,6 +57,20 @@ app.config['SECRET_KEY'] = 'your-secret-key-here'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///asset_management.db')
 if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
     app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
+
+# Thêm cấu hình để xử lý vấn đề kết nối PostgreSQL
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,  # Kiểm tra kết nối trước khi sử dụng
+    'pool_recycle': 300,    # Tái tạo kết nối sau 5 phút
+    'pool_timeout': 20,     # Timeout cho pool
+    'max_overflow': 0,      # Không cho phép overflow
+    'pool_size': 10,        # Kích thước pool
+    'connect_args': {
+        'connect_timeout': 10,  # Timeout kết nối 10 giây
+        'application_name': 'asset_management_app'
+    }
+}
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['WTF_CSRF_ENABLED'] = True
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600
@@ -110,6 +150,7 @@ def check_session():
             session.modified = True
 
 @login_manager.user_loader
+@retry_on_db_error(max_retries=3, delay=1)
 def load_user(user_id):
     return User.query.get(int(user_id))
 
@@ -162,6 +203,7 @@ def translate_db_value(value, field_type):
 # Routes
 @app.route('/')
 @login_required
+@retry_on_db_error(max_retries=3, delay=1)
 def index():
     if current_user.is_employee():
         return redirect(url_for('employee_asset_request'))
@@ -382,6 +424,20 @@ def index():
             join(Asset, AssetAssignment.asset_id == Asset.id).\
             filter(Asset.branch == branch, AssetReturnRequest.status == 'pending').count()
 
+    asset_type_labels = list(asset_type_labels or [])
+    asset_type_counts = list(asset_type_counts or [])
+    department_labels = list(department_labels or [])
+    department_asset_counts = list(department_asset_counts or [])
+    asset_status_labels = list(asset_status_labels or [])
+    asset_status_counts = list(asset_status_counts or [])
+    day_labels = list(day_labels or [])
+    assigned_per_day = list(assigned_per_day or [])
+    returned_per_day = list(returned_per_day or [])
+    top_employee_names = list(top_employee_names or [])
+    top_employee_counts = list(top_employee_counts or [])
+    top_department_names = list(top_department_names or [])
+    top_department_counts = list(top_department_counts or [])
+
     return render_template('index.html',
                          total_employees=total_employees,
                          total_assets=total_assets,
@@ -409,6 +465,7 @@ def index():
     )
 
 @app.route('/login', methods=['GET', 'POST'])
+@retry_on_db_error(max_retries=3, delay=1)
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
@@ -2479,6 +2536,44 @@ def check_and_add_asset_name_column():
         finally:
             conn.close()
 
+def check_database_connection():
+    """Kiểm tra kết nối database"""
+    try:
+        # Thử thực hiện một query đơn giản
+        db.session.execute('SELECT 1')
+        db.session.commit()
+        return True
+    except Exception as e:
+        logging.error(f"Database connection error: {e}")
+        db.session.rollback()
+        return False
+
+@app.route('/health-check')
+def health_check():
+    """Endpoint để kiểm tra sức khỏe của ứng dụng"""
+    try:
+        # Kiểm tra kết nối database
+        db_healthy = check_database_connection()
+        
+        if db_healthy:
+            return jsonify({
+                'status': 'healthy',
+                'database': 'connected',
+                'timestamp': datetime.now().isoformat()
+            }), 200
+        else:
+            return jsonify({
+                'status': 'unhealthy',
+                'database': 'disconnected',
+                'timestamp': datetime.now().isoformat()
+            }), 503
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
 @app.route('/set-language/<language>')
 def set_language(language):
     session['language'] = language
@@ -2733,6 +2828,41 @@ def get_assignment_history_stats():
 def favicon():
     """Handle favicon requests to prevent 404 errors"""
     return '', 204  # Return "No Content" status
+
+# Error handlers
+@app.errorhandler(OperationalError)
+def handle_database_error(error):
+    """Xử lý lỗi kết nối database"""
+    logging.error(f"Database operational error: {error}")
+    db.session.rollback()
+    
+    # Nếu là request AJAX, trả về JSON
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': False,
+            'message': 'Database connection error. Please try again.',
+            'error_type': 'database_connection'
+        }), 503
+    
+    # Nếu là request thường, redirect về trang lỗi
+    flash('Database connection error. Please try again.', 'error')
+    return redirect(url_for('login'))
+
+@app.errorhandler(DisconnectionError)
+def handle_disconnection_error(error):
+    """Xử lý lỗi ngắt kết nối database"""
+    logging.error(f"Database disconnection error: {error}")
+    db.session.rollback()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': False,
+            'message': 'Database connection lost. Please try again.',
+            'error_type': 'database_disconnection'
+        }), 503
+    
+    flash('Database connection lost. Please try again.', 'error')
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     with app.app_context():

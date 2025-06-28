@@ -735,10 +735,10 @@ function submitAssetForm() {
             if (response.success) {
                 // Hide modal
                 $('#addAssetModal').modal('hide');
-                
+                // Reset form
+                $('#assetForm')[0].reset();
                 // Show success notification
                 showNotification('資産が正常に追加されました', 'success');
-                
                 // Update asset list instead of reloading page
                 loadAssets();
             } else {

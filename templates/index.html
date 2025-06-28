@@ -2,69 +2,294 @@
 
 {% block content %}
 <style>
-    /* Limit card height */
+    /* Modern Dashboard Styles */
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 15px;
+    }
+    
+    /* Professional card styling */
     .dashboard-card {
-        min-height: 120px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        min-height: 140px;
+        overflow: hidden;
+        position: relative;
     }
+    
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+    }
+    
     .dashboard-card .card-body {
-        flex: 1 1 auto;
+        padding: 1.5rem;
+        color: white;
+        position: relative;
+        z-index: 2;
     }
-    /* New styles for pending requests card */
-    .pending-requests-card .card-body {
-        padding: 15px;
+    
+    .dashboard-card .icon-box {
+        background: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(10px);
     }
-    .pending-requests-card .card-title {
-        font-size: 1.2rem;
+    
+    .dashboard-card .icon-box i {
+        font-size: 1.5rem;
+        color: white;
+    }
+    
+    .dashboard-card .card-subtitle {
+        color: rgba(255,255,255,0.8) !important;
+        font-size: 0.9rem;
+        font-weight: 500;
         margin-bottom: 0.5rem;
     }
-    .pending-requests-card .card-text {
-        font-size: 1.5rem;
-        font-weight: bold;
+    
+    .dashboard-card .card-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    .pending-requests-card a {
+    
+    /* Different color schemes for cards */
+    .dashboard-card.card-employees {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .dashboard-card.card-assets {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .dashboard-card.card-assigned {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .dashboard-card.card-available {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+    
+    /* Pending requests cards */
+    .pending-requests-card {
+        background: white;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
         text-decoration: none;
+        color: inherit;
     }
+    
+    .pending-requests-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .pending-requests-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .pending-requests-card .card-subtitle {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .pending-requests-card .card-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
     .pending-requests-card .icon-box {
-        background-color: rgba(255, 193, 7, 0.1);
-        color: #ffc107;
+        background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%);
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
-    /* Style for chart containers */
+    
+    .pending-requests-card .icon-box i {
+        font-size: 1.8rem;
+        color: white;
+    }
+    
+    /* Chart cards */
+    .chart-card {
+        background: white;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+    }
+    
+    .chart-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 15px 15px 0 0;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+    }
+    
     .chart-card .card-body {
+        padding: 1.5rem;
+        height: 320px;
         position: relative;
-        height: 300px;
     }
-     .chart-card canvas {
+    
+    .chart-card canvas {
         width: 100% !important;
         height: 100% !important;
     }
-    /* Style for recent activities list */
+    
+    /* Stats and activities cards */
+    .stats-card {
+        background: white;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        height: 100%;
+    }
+    
+    .stats-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 15px 15px 0 0;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+    }
+    
+    .stats-card .card-body {
+        padding: 1.5rem;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    /* Recent activities list */
     .recent-activities-list {
         max-height: 250px;
         overflow-y: auto;
     }
-    .container, .container-fluid {
-        max-width: 1200px;
-        margin: 0 auto;
+    
+    .recent-activities-list .list-group-item {
+        border: none;
+        border-bottom: 1px solid #f8f9fa;
+        padding: 0.75rem 0;
+        background: transparent;
     }
-    .card {
-        padding: 1rem;
-        margin-bottom: 1rem;
+    
+    .recent-activities-list .list-group-item:last-child {
+        border-bottom: none;
     }
-    .table-responsive, .chart-responsive {
-        overflow-x: auto;
+    
+    /* Status badges */
+    .badge {
+        font-size: 0.8rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 20px;
     }
+    
+    /* Dropdown styling */
+    .dropdown-toggle {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+        color: white;
+    }
+    
+    .dropdown-toggle:hover,
+    .dropdown-toggle:focus {
+        background: rgba(255,255,255,0.3);
+        color: white;
+    }
+    
+    .dropdown-menu {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    
+    .dropdown-item:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 0 10px;
+        }
+        
+        .dashboard-card .card-title {
+            font-size: 2rem;
+        }
+        
+        .chart-card .card-body {
+            height: 250px;
+        }
+        
+        .stats-card .card-body {
+            max-height: 200px;
+        }
+    }
+    
+    /* Scrollbar styling */
+    .recent-activities-list::-webkit-scrollbar,
+    .stats-card .card-body::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .recent-activities-list::-webkit-scrollbar-track,
+    .stats-card .card-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    
+    .recent-activities-list::-webkit-scrollbar-thumb,
+    .stats-card .card-body::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+    
+    .recent-activities-list::-webkit-scrollbar-thumb:hover,
+    .stats-card .card-body::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+    
+    /* Prevent horizontal scroll */
     body {
+        overflow-x: hidden;
+    }
+    
+    .container-fluid {
         overflow-x: hidden;
     }
 </style>
 
-<!-- Thêm Chart.js CDN để sử dụng đối tượng Chart -->
+<!-- Chart.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- Add Chart.js configuration for Japanese font support -->
+<!-- Chart.js configuration for Japanese font support -->
 <script>
     Chart.defaults.font.family = "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif";
     Chart.defaults.font.size = 14;
@@ -82,104 +307,104 @@
     };
 </script>
 
-<div class="container-fluid p-0">
+<div class="dashboard-container">
+    <!-- Header -->
     <div class="d-flex align-items-center justify-content-between mb-4">
-        <h2 class="fw-bold">{{ _('Dashboard') }}</h2>
-        <!-- Removed time filter and refresh button -->
+        <h2 class="fw-bold text-dark">{{ _('Dashboard') }}</h2>
     </div>
     
     <!-- Summary Cards -->
-    <div class="row g-2 g-md-3 mb-4">
+    <div class="row g-3 mb-4">
         <div class="col-12 col-md-6 col-lg-3">
-            <div class="card dashboard-card h-100">
+            <div class="card dashboard-card card-employees h-100">
                 <div class="card-body d-flex flex-column justify-content-center">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="card-subtitle text-muted">{{ _('Total Employees') }}</h6>
+                        <h6 class="card-subtitle">{{ _('Total Employees') }}</h6>
                         <div class="icon-box">
                             <i class="fas fa-users"></i>
                         </div>
                     </div>
-                    <h3 class="card-title fw-bold mb-0">{{ total_employees }}</h3>
+                    <h3 class="card-title">{{ total_employees }}</h3>
                 </div>
             </div>
         </div>
         <div class="col-12 col-md-6 col-lg-3">
-            <div class="card dashboard-card h-100">
+            <div class="card dashboard-card card-assets h-100">
                 <div class="card-body d-flex flex-column justify-content-center">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="card-subtitle text-muted">{{ _('Total Assets') }}</h6>
+                        <h6 class="card-subtitle">{{ _('Total Assets') }}</h6>
                         <div class="icon-box">
                             <i class="fas fa-laptop"></i>
                         </div>
                     </div>
-                    <h3 class="card-title fw-bold mb-0">{{ total_assets }}</h3>
+                    <h3 class="card-title">{{ total_assets }}</h3>
                 </div>
             </div>
         </div>
         <div class="col-12 col-md-6 col-lg-3">
-            <div class="card dashboard-card h-100">
+            <div class="card dashboard-card card-assigned h-100">
                 <div class="card-body d-flex flex-column justify-content-center">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="card-subtitle text-muted">{{ _('Assigned Assets') }}</h6>
+                        <h6 class="card-subtitle">{{ _('Assigned Assets') }}</h6>
                         <div class="icon-box">
                             <i class="fas fa-check-circle"></i>
                         </div>
                     </div>
-                    <h3 class="card-title fw-bold mb-0">{{ assigned_assets }}</h3>
+                    <h3 class="card-title">{{ assigned_assets }}</h3>
                 </div>
             </div>
         </div>
         <div class="col-12 col-md-6 col-lg-3">
-            <div class="card dashboard-card h-100">
+            <div class="card dashboard-card card-available h-100">
                 <div class="card-body d-flex flex-column justify-content-center">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="card-subtitle text-muted">{{ _('Available Assets') }}</h6>
+                        <h6 class="card-subtitle">{{ _('Available Assets') }}</h6>
                         <div class="icon-box">
                             <i class="fas fa-box-open"></i>
                         </div>
                     </div>
-                    <h3 class="card-title fw-bold mb-0">{{ available_assets }}</h3>
+                    <h3 class="card-title">{{ available_assets }}</h3>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Pending Requests Cards -->
-    <div class="row g-2 g-md-3 mb-4">
-        {% if current_user.is_super_admin() or current_user.is_branch_admin() %}
+    {% if current_user.is_super_admin() or current_user.is_branch_admin() %}
+    <div class="row g-3 mb-4">
         <div class="col-12 col-md-6">
-            <a href="{{ url_for('asset_requests') }}" class="card pending-requests-card h-100">
-                <div class="card-body d-flex justify-content-between align-items-center p-3">
+            <a href="{{ url_for('asset_requests') }}" class="pending-requests-card">
+                <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-subtitle text-muted mb-1">{{ _('Pending Asset Requests') }}</h6>
-                        <h3 class="card-title fw-bold mb-0 text-warning">{{ pending_asset_requests_count }}</h3>
+                        <h6 class="card-subtitle">{{ _('Pending Asset Requests') }}</h6>
+                        <h3 class="card-title text-warning">{{ pending_asset_requests_count }}</h3>
                     </div>
-                    <div class="icon-box flex-shrink-0">
-                        <i class="fas fa-hourglass-half fa-2x"></i>
+                    <div class="icon-box">
+                        <i class="fas fa-hourglass-half"></i>
                     </div>
                 </div>
             </a>
         </div>
         <div class="col-12 col-md-6">
-             <a href="{{ url_for('asset_return_requests') }}" class="card pending-requests-card h-100">
-                <div class="card-body d-flex justify-content-between align-items-center p-3">
+            <a href="{{ url_for('asset_return_requests') }}" class="pending-requests-card">
+                <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-subtitle text-muted mb-1">{{ _('Pending Return Requests') }}</h6>
-                        <h3 class="card-title fw-bold mb-0 text-warning">{{ pending_return_requests_count }}</h3>
+                        <h6 class="card-subtitle">{{ _('Pending Return Requests') }}</h6>
+                        <h3 class="card-title text-warning">{{ pending_return_requests_count }}</h3>
                     </div>
-                    <div class="icon-box flex-shrink-0">
-                        <i class="fas fa-undo fa-2x"></i>
+                    <div class="icon-box">
+                        <i class="fas fa-undo"></i>
                     </div>
                 </div>
             </a>
         </div>
-        {% endif %}
     </div>
+    {% endif %}
 
     <!-- Asset Statistics Charts -->
-    <div class="row g-2 g-md-3 mb-4">
+    <div class="row g-3 mb-4">
         <div class="col-12 col-lg-6">
-            <div class="card h-100 chart-card">
+            <div class="chart-card">
                 <div class="card-header">{{ _('Asset Statistics by Type') }}</div>
                 <div class="card-body">
                     <canvas id="assetTypeChart"></canvas>
@@ -187,12 +412,12 @@
             </div>
         </div>
         <div class="col-12 col-lg-6">
-            <div class="card h-100 chart-card">
+            <div class="chart-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     {{ _('Asset Statistics by Department (Assigned)') }}
                     <div class="dropdown">
-                        <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" id="departmentChartTimeFilter" data-bs-toggle="dropdown" aria-expanded="false">
-                            {{ _('Last 7 Days') }} {# Default text, replace with current filter #}
+                        <button class="btn dropdown-toggle" type="button" id="departmentChartTimeFilter" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ _('Last 7 Days') }}
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="departmentChartTimeFilter">
                             <li><a class="dropdown-item" href="#" data-filter="week">{{ _('Week') }}</a></li>
@@ -210,14 +435,14 @@
     </div>
 
     <!-- Asset Flow Chart -->
-     <div class="row g-2 g-md-3 mb-4">
+    <div class="row g-3 mb-4">
         <div class="col-12">
-            <div class="card h-100 chart-card">
+            <div class="chart-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     {{ _('Asset Assignment and Return Count') }}
                     <div class="dropdown">
-                        <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" id="assetFlowChartTimeFilter" data-bs-toggle="dropdown" aria-expanded="false">
-                            {{ _('Last 7 Days') }} {# Default text, replace with current filter #}
+                        <button class="btn dropdown-toggle" type="button" id="assetFlowChartTimeFilter" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ _('Last 7 Days') }}
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="assetFlowChartTimeFilter">
                             <li><a class="dropdown-item" href="#" data-filter="week">{{ _('Week') }}</a></li>
@@ -234,313 +459,95 @@
         </div>
     </div>
 
-     <!-- Other Stats and Recent Activities -->
-     <div class="row g-2 g-md-3 mb-4">
+    <!-- Stats and Recent Activities -->
+    <div class="row g-3 mb-4">
         <div class="col-12 col-lg-6">
-            <div class="card h-100">
+            <div class="stats-card">
                 <div class="card-header">ステータス別の資産統計</div>
                 <div class="card-body">
                     {% if asset_status_labels or maintenance_assets > 0 or broken_assets > 0 %}
-                         <ul class="list-group list-group-flush">
-                         {% for i in range(asset_status_labels|length) %}
+                        <ul class="list-group list-group-flush">
+                        {% for i in range(asset_status_labels|length) %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 {{ asset_status_labels[i] }}
-                                <span class="badge bg-primary rounded-pill">{{ asset_status_counts[i] }}</span>
+                                <span class="badge bg-primary">{{ asset_status_counts[i] }}</span>
                             </li>
-                         {% endfor %}
-                         </ul>
-                     {% else %}
-                         <p>{{ _('No asset status data available.') }}</p>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">{{ _('No asset status data available.') }}</p>
                     {% endif %}
                 </div>
             </div>
         </div>
-         <div class="col-12 col-lg-6">
-            <div class="card h-100">
-                 <div class="card-header">最近のアクティビティ（資産割り当て)</div>
-                 <div class="card-body">
-                     {% if recent_activities %}
-                         <ul class="list-group list-group-flush recent-activities-list">
-                             {% for activity in recent_activities %}
-                                 <li class="list-group-item">
-                                     {% if activity.type == 'assigned' %}
-                                         従業員 <strong>{{ activity.employee.name }}</strong> に資産 <strong>{{ activity.asset.name }} ({{ activity.asset.asset_code }})</strong> を割り当てました
-                                     {% elif activity.type == 'returned' %}
-                                         従業員 <strong>{{ activity.employee.name }}</strong> から資産 <strong>{{ activity.asset.name }} ({{ activity.asset.asset_code }})</strong> を回収しました
-                                     {% elif activity.type == 'request_approved' %}
-                                         従業員 <strong>{{ activity.employee.name }}</strong> の資産リクエスト <strong>{{ activity.asset.name if activity.asset else '' }}{% if activity.asset and activity.asset.asset_code %} ({{ activity.asset.asset_code }}){% endif %}</strong> を承認しました
-                                     {% elif activity.type == 'request_rejected' %}
-                                         従業員 <strong>{{ activity.employee.name }}</strong> の資産リクエスト <strong>{{ activity.asset.name if activity.asset else '' }}{% if activity.asset and activity.asset.asset_code %} ({{ activity.asset.asset_code }}){% endif %}</strong> を拒否しました
-                                     {% elif activity.type == 'return_approved' %}
-                                         従業員 <strong>{{ activity.employee.name }}</strong> の資産返却リクエスト <strong>{{ activity.asset.name if activity.asset else '' }}{% if activity.asset and activity.asset.asset_code %} ({{ activity.asset.asset_code }}){% endif %}</strong> を承認しました
-                                     {% elif activity.type == 'return_rejected' %}
-                                         従業員 <strong>{{ activity.employee.name }}</strong> の資産返却リクエスト <strong>{{ activity.asset.name if activity.asset else '' }}{% if activity.asset and activity.asset.asset_code %} ({{ activity.asset.asset_code }}){% endif %}</strong> を拒否しました
-                                     {% endif %}
-                                     {% if activity.note %}<br><span class="text-muted small">{{ activity.note }}</span>{% endif %}
-                                     <br>
-                                     <small class="text-muted">{{ activity.date.strftime('%d-%m-%Y') }}</small>
-                                 </li>
-                             {% endfor %}
-                         </ul>
-                     {% else %}
-                         <p>最近の活動はありません</p>
-                     {% endif %}
-                 </div>
-             </div>
-         </div>
-     </div>
-
+        <div class="col-12 col-lg-6">
+            <div class="stats-card">
+                <div class="card-header">最近のアクティビティ（資産割り当て)</div>
+                <div class="card-body">
+                    {% if recent_activities %}
+                        <ul class="list-group list-group-flush recent-activities-list">
+                            {% for activity in recent_activities %}
+                                <li class="list-group-item">
+                                    {% if activity.type == 'assigned' %}
+                                        従業員 <strong>{{ activity.employee.name }}</strong> に資産 <strong>{{ activity.asset.name }} ({{ activity.asset.asset_code }})</strong> を割り当てました
+                                    {% elif activity.type == 'returned' %}
+                                        従業員 <strong>{{ activity.employee.name }}</strong> から資産 <strong>{{ activity.asset.name }} ({{ activity.asset.asset_code }})</strong> を回収しました
+                                    {% elif activity.type == 'request_approved' %}
+                                        従業員 <strong>{{ activity.employee.name }}</strong> の資産リクエスト <strong>{{ activity.asset.name if activity.asset else '' }}{% if activity.asset and activity.asset.asset_code %} ({{ activity.asset.asset_code }}){% endif %}</strong> を承認しました
+                                    {% elif activity.type == 'request_rejected' %}
+                                        従業員 <strong>{{ activity.employee.name }}</strong> の資産リクエスト <strong>{{ activity.asset.name if activity.asset else '' }}{% if activity.asset and activity.asset.asset_code %} ({{ activity.asset.asset_code }}){% endif %}</strong> を拒否しました
+                                    {% elif activity.type == 'return_approved' %}
+                                        従業員 <strong>{{ activity.employee.name }}</strong> の資産返却リクエスト <strong>{{ activity.asset.name if activity.asset else '' }}{% if activity.asset and activity.asset.asset_code %} ({{ activity.asset.asset_code }}){% endif %}</strong> を承認しました
+                                    {% elif activity.type == 'return_rejected' %}
+                                        従業員 <strong>{{ activity.employee.name }}</strong> の資産返却リクエスト <strong>{{ activity.asset.name if activity.asset else '' }}{% if activity.asset and activity.asset.asset_code %} ({{ activity.asset.asset_code }}){% endif %}</strong> を拒否しました
+                                    {% endif %}
+                                    {% if activity.note %}<br><span class="text-muted small">{{ activity.note }}</span>{% endif %}
+                                    <br>
+                                    <small class="text-muted">{{ activity.date.strftime('%d-%m-%Y') }}</small>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">最近の活動はありません</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<!-- Include external dashboard JavaScript -->
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
+<!-- Pass data from Flask to JavaScript -->
 <script>
-    // Data passed from Flask backend (initial data)
-    const assetTypeLabels = {{ asset_types|tojson|safe }};
-    const assetTypeCounts = {{ asset_type_counts|tojson|safe }};
-    const departmentLabels = {{ department_labels|tojson|safe }};
-    const departmentAssetCounts = {{ department_asset_counts|tojson|safe }};
-    const dayLabels = {{ day_labels|tojson|safe }};
-    const assignedPerDay = {{ assigned_per_day|tojson|safe }};
-    const returnedPerDay = {{ returned_per_day|tojson|safe }};
-    // The following might not be used by the charts below, but are kept as they are passed initially
-    const topEmployeeNames = {{ top_employee_names|tojson|safe }};
-    const topEmployeeCounts = {{ top_employee_counts|tojson|safe }};
-    const topDepartmentNames = {{ top_department_names|tojson|safe }};
-    const topDepartmentCounts = {{ top_department_counts|tojson|safe }};
-    const assetStatusLabels = {{ asset_status_labels|tojson|safe }};
-    const assetStatusCounts = {{ asset_status_counts|tojson|safe }};
-    const noDepartmentDataMsg = "{{ _('No department data available.') }}";
-
-    // Function to generate dynamic colors
-    function generateColors(num) {
-        const colors = [];
-        for (let i = 0; i < num; i++) {
-            const hue = (i * 137.508) % 360; // Golden angle approximation
-            colors.push(`hsl(${hue}, 70%, 60%)`);
+    // Initialize charts with data from Flask backend
+    document.addEventListener('DOMContentLoaded', function() {
+        const dashboardData = {
+            assetTypeLabels: {{ asset_types|tojson|safe }},
+            assetTypeCounts: {{ asset_type_counts|tojson|safe }},
+            departmentLabels: {{ department_labels|tojson|safe }},
+            departmentAssetCounts: {{ department_asset_counts|tojson|safe }},
+            dayLabels: {{ day_labels|tojson|safe }},
+            assignedPerDay: {{ assigned_per_day|tojson|safe }},
+            returnedPerDay: {{ returned_per_day|tojson|safe }},
+            topEmployeeNames: {{ top_employee_names|tojson|safe }},
+            topEmployeeCounts: {{ top_employee_counts|tojson|safe }},
+            topDepartmentNames: {{ top_department_names|tojson|safe }},
+            topDepartmentCounts: {{ top_department_counts|tojson|safe }},
+            assetStatusLabels: {{ asset_status_labels|tojson|safe }},
+            assetStatusCounts: {{ asset_status_counts|tojson|safe }},
+            noDepartmentDataMsg: "{{ _('No department data available.') }}"
+        };
+        
+        // Initialize dashboard charts
+        if (typeof initializeDashboardCharts === 'function') {
+            initializeDashboardCharts(dashboardData);
+        } else {
+            console.error('Dashboard JavaScript not loaded properly');
         }
-        return colors;
-    }
-
-    // Variables to hold chart instances
-    let departmentAssetChartInstance = null;
-    let assetFlowChartInstance = null;
-
-
-    // Biểu đồ loại tài sản (tròn)
-    if (assetTypeLabels && assetTypeLabels.length > 0 && !(assetTypeLabels.length === 1 && assetTypeLabels[0] === 'No Data')) {
-        const assetTypeCtx = document.getElementById('assetTypeChart').getContext('2d');
-        new Chart(assetTypeCtx, {
-            type: 'pie',
-            data: {
-                labels: assetTypeLabels,
-                datasets: [{
-                    data: assetTypeCounts,
-                    backgroundColor: generateColors(assetTypeLabels.length),
-                    borderColor: '#ffffff',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                    },
-                    title: {
-                        display: false,
-                        text: 'Asset Statistics by Type'
-                    }
-                }
-            }
-        });
-    } else {
-         document.getElementById('assetTypeChart').parentElement.innerHTML = '<p>データがありません</p>';
-    }
-
-    // Department Asset Chart (Bar Chart) - Initial rendering
-     if (departmentLabels && departmentLabels.length > 0 && !(departmentLabels.length === 1 && departmentLabels[0] === 'No Data')) {
-        const departmentAssetCtx = document.getElementById('departmentAssetChart').getContext('2d');
-        departmentAssetChartInstance = new Chart(departmentAssetCtx, { // Store instance in variable
-            type: 'bar',
-            data: {
-                labels: departmentLabels,
-                datasets: [{
-                    label: 'Number of Assigned Assets', // English label
-                    data: departmentAssetCounts,
-                     backgroundColor: generateColors(departmentLabels.length),
-                     borderColor: generateColors(departmentLabels.length).map(color => color.replace('60%', '40%')), // Darker border
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false,
-                    },
-                     title: {
-                        display: false,
-                        text: 'Asset Statistics by Department'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0 // Ensure whole numbers on y-axis
-                        }
-
-                    }
-                }
-            }
-        });
-     } else {
-          document.getElementById('departmentAssetChart').parentElement.innerHTML = `<p>${noDepartmentDataMsg}</p>`;
-     }
-
-     // Asset Flow Chart (Line Chart) - Initial rendering
-     if (dayLabels && dayLabels.length > 0) {
-         const assetFlowCtx = document.getElementById('assetFlowChart').getContext('2d');
-         assetFlowChartInstance = new Chart(assetFlowCtx, { // Store instance in variable
-             type: 'line',
-             data: {
-                 labels: dayLabels,
-                 datasets: [
-                     {
-                         label: '割り当て済み',
-                         data: assignedPerDay,
-                         borderColor: 'rgb(75, 192, 192)',
-                         tension: 0.1
-                     },
-                      {
-                         label: '返却済み',
-                         data: returnedPerDay,
-                         borderColor: 'rgb(255, 99, 132)',
-                         tension: 0.1
-                     }
-                 ]
-             },
-             options: {
-                 responsive: true,
-                 maintainAspectRatio: false,
-                  plugins: {
-                     title: {
-                        display: false,
-                        text: 'Asset Assignment and Return Count (Last 7 Days)'
-                    }
-                 },
-                 scales: {
-                    y: {
-                        beginAtZero: true,
-                            ticks: {
-                                precision: 0 // Ensure whole numbers on y-axis
-                            }
-                    }
-                }
-             }
-         });
-     } else {
-          document.getElementById('assetFlowChart').parentElement.innerHTML = '<p>No recent assignment/return data.</p>';
-     }
-
-
-     // Add event listeners for time filters
-     document.querySelectorAll('.dropdown-menu .dropdown-item').forEach(item => {
-         item.addEventListener('click', function(e) {
-             e.preventDefault(); // Prevent default link behavior
-
-             const filter = this.getAttribute('data-filter');
-             const button = this.closest('.dropdown').querySelector('.dropdown-toggle');
-             const cardHeader = this.closest('.card-header');
-             let chartId = null;
-
-             // Determine which chart this filter belongs to
-             if (cardHeader.parentElement.querySelector('#departmentAssetChart')) {
-                 chartId = 'departmentAssetChart';
-                 button.textContent = this.textContent; // Update button text
-                 // Call function to update Department Asset Chart
-                 updateDepartmentAssetChart(filter);
-             } else if (cardHeader.parentElement.querySelector('#assetFlowChart')) {
-                 chartId = 'assetFlowChart';
-                  button.textContent = this.textContent; // Update button text
-                 // Call function to update Asset Flow Chart
-                  updateAssetFlowChart(filter);
-             }
-
-             console.log(`Selected filter: ${filter} for chart: ${chartId}`);
-
-             // The fetch/update logic is now inside the update functions below
-         });
-     });
-
-    // Function to update Department Asset Chart data from backend
-    function updateDepartmentAssetChart(filter) {
-        console.log(`Fetching data for Department Asset Chart with filter: ${filter}`);
-        // TODO: --- START OF USER MODIFIABLE SECTION (FRONTEND) ---
-        // 1. Replace '/api/department_assets' with your actual backend API route URL
-        //    that you created to provide this data.
-        // 2. Ensure the JSON structure returned by your backend matches how you use
-        //    the data here (e.g., data.labels, data.counts).
-        fetch(`/api/department_assets?filter=${filter}`) // <<< MODIFY THIS URL
-            .then(response => {
-                if (!response.ok) {
-                    // Handle error if backend returns an error status code (like 404)
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Assuming 'data' contains { labels: [...], counts: [...] }
-                // Update chart data and labels
-                if (departmentAssetChartInstance) { // Check if the instance exists
-                    departmentAssetChartInstance.data.labels = data.labels;
-                    departmentAssetChartInstance.data.datasets[0].data = data.counts; // Assuming one dataset for counts
-                    departmentAssetChartInstance.update(); // Redraw the chart
-                    console.log('Department Asset data updated successfully:', data);
-                } else {
-                     console.error('Department Asset Chart instance not found.');
-                }
-            })
-            .catch(error => console.error('Error fetching department asset data:', error));
-         // TODO: --- END OF USER MODIFIABLE SECTION (FRONTEND) ---
-    }
-
-    // Function to update Asset Flow Chart data from backend
-    function updateAssetFlowChart(filter) {
-         console.log(`Fetching data for Asset Flow Chart with filter: ${filter}`);
-         // TODO: --- START OF USER MODIFIABLE SECTION (FRONTEND) ---
-         // 1. Replace '/api/asset_flow' with your actual backend API route URL
-         //    that you created to provide this data.
-         // 2. Ensure the JSON structure returned by your backend matches how you use
-         //    the data here (e.g., data.labels, data.assigned, data.returned).
-         fetch(`/api/asset_flow?filter=${filter}`) // <<< MODIFY THIS URL
-             .then(response => {
-                 if (!response.ok) {
-                     // Handle error if backend returns an error status code (like 404)
-                     throw new Error(`HTTP error! status: ${response.status}`);
-                 }
-                 return response.json();
-             })
-             .then(data => {
-                 // Assuming 'data' contains { labels: [...], assigned: [...], returned: [...] }
-                 // Update chart data and labels
-                 if (assetFlowChartInstance) { // Check if the instance exists
-                    assetFlowChartInstance.data.labels = data.labels;
-                    // Assuming assigned is dataset 0 and returned is dataset 1
-                    assetFlowChartInstance.data.datasets[0].data = data.assigned;
-                    assetFlowChartInstance.data.datasets[1].data = data.returned;
-                    assetFlowChartInstance.update(); // Redraw the chart
-                    console.log('Asset Flow data updated successfully:', data);
-                 } else {
-                     console.error('Asset Flow Chart instance not found.');
-                 }
-             })
-             .catch(error => console.error('Error fetching asset flow data:', error));
-        // TODO: --- END OF USER MODIFIABLE SECTION (FRONTEND) ---
-    }
-
+    });
 </script>
 {% endblock %} 
