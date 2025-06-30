@@ -168,12 +168,7 @@ function loadDepartmentsForFilter() {
 
 function formatDate(dateStr) {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    }).replace(/\//g, '-');
+    return dateStr.split(' ')[0];
 }
 
 function translateStatus(status) {
