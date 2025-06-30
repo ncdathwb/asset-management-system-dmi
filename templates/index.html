@@ -539,7 +539,8 @@
             topDepartmentCounts: {{ top_department_counts|tojson|safe }},
             assetStatusLabels: {{ asset_status_labels|tojson|safe }},
             assetStatusCounts: {{ asset_status_counts|tojson|safe }},
-            noDepartmentDataMsg: "{{ _('No department data available.') }}"
+            noDepartmentDataMsg: "{{ _('No department data available.') }}",
+            assetAssignedLabel: "{{ asset_assigned_label }}"
         };
         
         // Initialize dashboard charts

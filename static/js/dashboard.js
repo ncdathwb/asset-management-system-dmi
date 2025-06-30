@@ -27,7 +27,8 @@ function initializeDashboardCharts(data) {
         returnedPerDay,
         assetStatusLabels,
         assetStatusCounts,
-        noDepartmentDataMsg
+        noDepartmentDataMsg,
+        assetAssignedLabel
     } = data;
 
     // Asset Type Chart (Pie Chart)
@@ -69,7 +70,7 @@ function initializeDashboardCharts(data) {
             data: {
                 labels: departmentLabels,
                 datasets: [{
-                    label: 'Number of Assigned Assets',
+                    label: assetAssignedLabel || 'Number of Assigned Assets',
                     data: departmentAssetCounts,
                      backgroundColor: generateColors(departmentLabels.length),
                      borderColor: generateColors(departmentLabels.length).map(color => color.replace('60%', '40%')),

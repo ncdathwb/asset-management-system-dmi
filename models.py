@@ -97,9 +97,10 @@ class Employee(db.Model):
     department = db.Column(db.String(50), nullable=False)
     branch = db.Column(db.String(20), nullable=False)
     email = db.Column(db.String(120), nullable=False)
-    status = db.Column(db.String(20), default='active')  # active, inactive
+    status = db.Column(db.String(20), default='active')  # active, inactive, deleted
     created_at = db.Column(db.DateTime, default=get_current_branch_time)
     updated_at = db.Column(db.DateTime, default=get_current_branch_time, onupdate=get_current_branch_time)
+    deleted_at = db.Column(db.DateTime, nullable=True)  # Thêm trường này cho soft delete
 
     # Add unique constraint for employee_code within a branch
     __table_args__ = (
@@ -107,10 +108,24 @@ class Employee(db.Model):
     )
 
     # Relationships
-    assets = db.relationship('AssetAssignment', backref='employee', lazy=True)
+    assets = db.relationship(
+        'AssetAssignment',
+        backref='employee',
+        lazy=True,
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
 
     def is_active(self):
-        return self.status == 'active'
+        return self.status == 'active' and self.deleted_at is None
+
+    def is_deleted(self):
+        return self.deleted_at is not None
+
+    def soft_delete(self):
+        """Soft delete employee - chỉ đánh dấu deleted_at, không xóa thật"""
+        self.deleted_at = get_current_branch_time()
+        self.status = 'deleted'
 
     def get_assigned_assets(self):
         return [assignment.asset for assignment in self.assets if assignment.status == 'assigned']
@@ -162,8 +177,8 @@ class Asset(db.Model):
 class AssetAssignment(db.Model):
     # Các trường hiện có
     id = db.Column(db.Integer, primary_key=True)
-    asset_id = db.Column(db.Integer, db.ForeignKey('asset.id'), nullable=False)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+    asset_id = db.Column(db.Integer, db.ForeignKey('asset.id', ondelete='CASCADE'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='CASCADE'), nullable=False)
     assigned_date = db.Column(db.DateTime, default=get_current_branch_time)
     return_date = db.Column(db.DateTime)
     status = db.Column(db.String(20), default='assigned')  # assigned, returned

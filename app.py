@@ -709,26 +709,22 @@ def delete_employee(id):
         employee = Employee.query.get_or_404(id)
         if employee.branch != session.get('branch'):
             return jsonify({'success': False, 'message': '権限がありません'})
-        
         # Check if employee has assigned assets
         assigned_assets = AssetAssignment.query.filter_by(
             employee_id=employee.id, 
             status='assigned'
         ).first()
-        
         if assigned_assets:
             return jsonify({
                 'success': False, 
                 'message': '資産が割り当てられている従業員は削除できません。先に無効化してください。'
             })
-        
-        # Delete employee without deleting asset assignment history
-        db.session.delete(employee)
+        # Soft delete employee (ẩn khỏi hệ thống)
+        employee.soft_delete()
         db.session.commit()
-        
         return jsonify({
             'success': True, 
-            'message': f'従業員 {employee.name} が削除されました'
+            'message': f'従業員 {employee.name} が削除（非表示）されました'
         })
     except Exception as e:
         db.session.rollback()
@@ -930,7 +926,7 @@ def delete_asset(id):
     # Kiểm tra xem tài sản có đang được cấp phát không
     assigned = AssetAssignment.query.filter_by(asset_id=asset.id, status='assigned').first()
     if assigned:
-        return jsonify({'success': False, 'message': 'Cannot delete assets that are currently assigned. Please reclaim all assets first.'})
+        return jsonify({'success': False, 'message': translate('Cannot delete assets that are currently assigned. Please reclaim all assets first.', 'messages', 'ja')})
     # Xoá toàn bộ lịch sử cấp phát liên quan
     AssetAssignment.query.filter_by(asset_id=asset.id).delete()
     db.session.delete(asset)
@@ -1063,14 +1059,14 @@ def export_assets_csv():
 def create_asset_request():
     try:
         employee_id = request.form.get('employee_id')
+        if not employee_id or not str(employee_id).isdigit():
+            return jsonify({'success': False, 'message': 'Invalid employee id'})
+        employee = Employee.query.get(int(employee_id))
+        if not employee:
+            return jsonify({'success': False, 'message': 'Invalid employee'})
         asset_id = request.form.get('asset_id')
         asset_name = request.form.get('asset_name')
         notes = request.form.get('notes')
-
-        # Check if employee exists
-        employee = Employee.query.get(employee_id)
-        if not employee:
-            return jsonify({'success': False, 'message': 'Invalid employee'})
 
         # Nếu chọn từ danh sách
         if asset_id and asset_id != 'other':
@@ -1083,13 +1079,12 @@ def create_asset_request():
             asset_name_value = asset_name 
             asset_code_value = ''
 
-        # C
         branch_timezone = get_branch_timezone(employee.branch)
         request_date_now = datetime.now(branch_timezone).date()
 
         request_obj = AssetRequest(
             asset_id=asset_id if asset_id and asset_id != 'other' else None,
-            employee_id=employee_id,
+            employee_id=int(employee_id),
             notes=notes,
             request_date=request_date_now,
             asset_name=asset_name_value
