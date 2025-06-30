@@ -21,6 +21,7 @@ from utils import translate
 import time
 from sqlalchemy.exc import OperationalError, DisconnectionError
 from functools import wraps
+import json
 
 def retry_on_db_error(max_retries=3, delay=1):
     """Decorator để retry khi gặp lỗi kết nối database"""
@@ -234,16 +235,10 @@ def index():
     available_assets = asset_query.with_entities(db.func.sum(Asset.available_quantity)).scalar() or 0
 
     # Get asset types and counts (not filtered by date)
+    with open('translations.json', encoding='utf-8') as f:
+        translations = json.load(f)
     def translate_asset_type(asset_type):
-        mapping = {
-            "Laptop VN": _("Laptop VN"),
-            "Monitor VN": _("Monitor VN"),
-            "Máy chiếu VN": _("Máy chiếu VN"),
-            "Máy in VN": _("Máy in VN"),
-            "Phone VN": _("Phone VN"),
-            "Tablet VN": _("Tablet VN"),
-        }
-        return mapping.get(asset_type, _(asset_type))
+        return translations.get('asset_type', {}).get(asset_type, {}).get('ja', asset_type)
     asset_types = db.session.query(Asset.type, db.func.count(Asset.id)).\
         filter_by(branch=branch).\
         group_by(Asset.type).all()
@@ -437,6 +432,7 @@ def index():
     top_employee_counts = list(top_employee_counts or [])
     top_department_names = list(top_department_names or [])
     top_department_counts = list(top_department_counts or [])
+    asset_assigned_label = translations.get('status', {}).get('assigned', {}).get('ja', '割り当て済み')
 
     return render_template('index.html',
                          total_employees=total_employees,
@@ -461,7 +457,8 @@ def index():
                          assigned_per_day=assigned_per_day,
                          returned_per_day=returned_per_day,
                          pending_asset_requests_count=pending_asset_requests_count,
-                         pending_return_requests_count=pending_return_requests_count
+                         pending_return_requests_count=pending_return_requests_count,
+                         asset_assigned_label=asset_assigned_label
     )
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -1577,31 +1574,23 @@ def approve_return_request(id):
     try:
         if not current_user.is_super_admin() and not current_user.is_branch_admin():
             return jsonify({'success': False, 'message': 'You do not have permission to approve'})
-            
         return_request = AssetReturnRequest.query.get_or_404(id)
         asset_assignment = AssetAssignment.query.get_or_404(return_request.asset_assignment_id)
-        
-        # Check if asset belongs to current branch
         asset = Asset.query.get(asset_assignment.asset_id)
         if asset.branch != session.get('branch'):
             return jsonify({'success': False, 'message': 'You do not have permission for assets in other branches'})
-        
-        # Update request status
         return_request.status = 'approved'
         return_request.approved_by = current_user.id
         return_request.approval_date = datetime.now(get_branch_timezone(asset.branch)).date()
-        
-        # Update asset assignment status
         asset_assignment.status = 'returned'
         asset_assignment.return_date = datetime.now(get_branch_timezone(asset.branch)).date()
-        
-        # Update available asset quantity
         asset.available_quantity += 1
-        asset.status = 'Available'
-        
+        # Nếu lý do trả là 'Not in use / Idle' hoặc tương đương thì chuyển trạng thái asset về 'Available'
+        reclaim_reason = (return_request.reclaim_reason or '').strip().lower()
+        if reclaim_reason in ['not in use / idle', '未使用', 'chưa sử dụng', 'không sử dụng']:
+            asset.status = 'Available'
         db.session.commit()
         return jsonify({'success': True, 'message': '資産返却リクエストが承認されました'})
-        
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)})
@@ -2033,8 +2022,8 @@ def reclaim_asset_assignment(assignment_id):
             elif any(keyword in reason_lower for keyword in ['mất', 'lost', 'missing']):
                 asset.status = 'Lost'
             elif any(keyword in reason_lower for keyword in ['không sử dụng', 'rảnh', 'idle', 'not in use']):
-                asset.status = 'Not in use / Idle'
-            else: # Default to Available if not specified
+                asset.status = 'Available'
+            else:
                 asset.status = 'Available'
         db.session.commit()
         return jsonify({'success': True, 'message': 'Asset reclaimed successfully'})
@@ -2483,7 +2472,7 @@ def bulk_reclaim_assets():
             elif any(keyword in reason_lower for keyword in ['mất', 'lost', 'missing']):
                 asset.status = 'Lost'
             elif any(keyword in reason_lower for keyword in ['không sử dụng', 'rảnh', 'idle', 'not in use']):
-                asset.status = 'Not in use / Idle'
+                asset.status = 'Available'
             else:
                 asset.status = 'Available'
             count_success += 1

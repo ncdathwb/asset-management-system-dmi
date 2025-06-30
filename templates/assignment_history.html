@@ -4,11 +4,11 @@
 
 {% block content %}
 <div class="container">
-    <h2>{{ _('資産割当履歴') }}</h2>
+    <h2 class="mb-4" style="font-weight:700; letter-spacing:1px;">{{ _('資産割当履歴') }}</h2>
     
-    <div class="card mb-4">
+    <div class="card mb-4 shadow-sm" style="border-radius: 16px;">
         <div class="card-body">
-            <div class="row g-3">
+            <form class="row g-3 filter-form">
                 <div class="col-md-4">
                     <input type="text" class="form-control" id="searchInput" placeholder="{{ _('履歴を検索...') }}">
                 </div>
@@ -24,19 +24,19 @@
                         <option value="">すべての部署</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="assignedDateStart" class="form-label">割当日の開始</label>
                     <input type="date" class="form-control" id="assignedDateStart">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="assignedDateEnd" class="form-label">割当日の終了</label>
                     <input type="date" class="form-control" id="assignedDateEnd">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="returnDateStart" class="form-label">返却日の開始</label>
                     <input type="date" class="form-control" id="returnDateStart">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="returnDateEnd" class="form-label">返却日の終了</label>
                     <input type="date" class="form-control" id="returnDateEnd">
                 </div>
@@ -55,18 +55,17 @@
                         <option value="100">100</option>
                     </select>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 
-    <div class="card">
+    <div class="card shadow-sm" style="border-radius: 16px;">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped" id="historyTable">
-                    <thead>
+                <table class="table table-hover align-middle" id="historyTable" style="border-radius: 12px; overflow: hidden;">
+                    <thead class="table-light">
                         <tr>
                             <th>{{ _('日付') }}</th>
-                            <th>{{ _('種類') }}</th>
                             <th>{{ _('従業員') }}</th>
                             <th>{{ _('資産') }}</th>
                             <th>{{ _('ステータス') }}</th>
@@ -87,6 +86,7 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
 var currentPerPage = 10;
 
@@ -179,6 +179,19 @@ function translateStatus(status) {
     return statusMap[status] || status;
 }
 
+function translateReason(reason) {
+    const map = {
+        'Not in use / Idle': '未使用',
+        'Damaged': '故障',
+        'Lost': '紛失',
+        'Under maintenance': 'メンテナンス中',
+        'In Use': '使用中',
+        'Other': 'その他',
+        '': ''
+    };
+    return map[reason] || reason;
+}
+
 function loadAssignmentHistory(page = 1, per_page) {
     if (!per_page) per_page = currentPerPage;
     var status = $('#statusFilter').val();
@@ -216,23 +229,21 @@ function loadAssignmentHistory(page = 1, per_page) {
                 response.history.forEach(function(item) {
                     var row = $('<tr>');
                     var date = item.assigned_date || item.return_date;
-                    var type = item.status === 'assigned' ? '割当' : '返却';
-                    var status = item.status === 'assigned' ? '割当済み' : '返却済み';
-                    
                     row.append($('<td>').text(formatDate(date)));
-                    row.append($('<td>').text(type));
                     row.append($('<td>').text(item.employee_name + ' (' + item.employee_code + ')'));
                     row.append($('<td>').text(item.asset_name + ' (' + item.asset_code + ')'));
+                    var status = item.status === 'assigned' ? '割当済み' : '返却済み';
                     row.append($('<td>').text(status));
-                    
                     var notes = '';
                     if (item.status === 'assigned') {
-                        notes = item.notes || 'なし';
+                        notes = '';
                     } else {
-                        notes = item.reclaim_reason || item.notes || 'なし';
+                        let reasons = [];
+                        if (item.reclaim_reason) reasons.push('理由: ' + translateReason(item.reclaim_reason));
+                        if (item.reclaim_notes) reasons.push('メモ: ' + item.reclaim_notes);
+                        notes = reasons.join(' | ') || 'なし';
                     }
                     row.append($('<td>').text(notes));
-                    
                     row.addClass(item.status === 'assigned' ? 'table-primary' : 'table-success');
                     
                     tableBody.append(row);
@@ -353,4 +364,47 @@ function generatePagination(total, currentPage, perPage, totalPages) {
 {% endblock %}
 
 {% block styles %}
+<style>
+.card {
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    background: #fff;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+.filter-form .form-control, .filter-form .form-select {
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 15px;
+    margin-bottom: 8px;
+}
+.filter-form label {
+    font-weight: 500;
+    color: #555;
+}
+.table {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+}
+.table thead th {
+    background: #f5f6fa;
+    font-weight: bold;
+    color: #333;
+    border-bottom: 2px solid #e0e0e0;
+}
+.table tbody tr:hover {
+    background: #f0f7ff;
+    transition: background 0.2s;
+}
+.table td, .table th {
+    padding: 12px 16px;
+    vertical-align: middle;
+}
+.btn-primary {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 8px 20px;
+}
+</style>
 {% endblock %}
