@@ -2839,7 +2839,7 @@ def handle_database_error(error):
             'error_type': 'database_connection'
         }), 503
     
-    # Nếu là request thường, redirect về trang lỗi
+    
     flash('Database connection error. Please try again.', 'error')
     return redirect(url_for('login'))
 
