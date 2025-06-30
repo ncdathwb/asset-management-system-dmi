@@ -52,7 +52,7 @@ def get_db_connection():
     return conn
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 # Sử dụng PostgreSQL thay vì SQLite
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///asset_management.db')
 if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
