@@ -518,7 +518,7 @@ def employees():
     department_filter = request.args.get('department', '').strip()
     search_filter = request.args.get('search', '').strip()
     
-    query = Employee.query.filter_by(branch=session.get('branch'))
+    query = Employee.query.filter_by(branch=session.get('branch')).filter(Employee.deleted_at.is_(None))
     
     # Áp dụng filter phòng ban nếu có
     if department_filter:
