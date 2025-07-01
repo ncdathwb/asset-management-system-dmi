@@ -750,21 +750,12 @@ def deactivate_employee(id):
         # Return all assets to inventory
         current_time = datetime.now(get_branch_timezone(employee.branch))
         for assignment in assigned_assets:
-            # Tạo bản ghi mới cho lịch sử thu hồi
-            return_assignment = AssetAssignment(
-                asset_id=assignment.asset_id,
-                employee_id=assignment.employee_id,
-                assigned_date=assignment.assigned_date,
-                return_date=current_time,
-                status='returned',
-                notes=assignment.notes,
-                reclaim_reason='従業員の無効化',
-                reclaim_notes='',
-                created_at=assignment.created_at,
-                updated_at=current_time
-            )
-            db.session.add(return_assignment)
-            
+            # Update assignment cũ thay vì tạo mới
+            assignment.status = 'returned'
+            assignment.return_date = current_time
+            assignment.reclaim_reason = '従業員の無効化'
+            assignment.reclaim_notes = ''
+            assignment.updated_at = current_time
             # Update asset available quantity
             asset = Asset.query.get(assignment.asset_id)
             if asset:
@@ -824,6 +815,7 @@ def get_employee(id):
                 'asset_code': asset.asset_code,
                 'name': asset.name,
                 'type': asset.type,
+                'type_jp': translate(asset.type, 'asset_type', 'ja'),
                 'reclaim_reason': assign.reclaim_reason
             }
             for asset, assign in all_assignments if assign.status == 'assigned'
