@@ -1582,11 +1582,23 @@ def approve_return_request(id):
         return_request.status = 'approved'
         return_request.approved_by = current_user.id
         return_request.approval_date = datetime.now(get_branch_timezone(asset.branch)).date()
-        asset_assignment.status = 'returned'
-        asset_assignment.return_date = datetime.now(get_branch_timezone(asset.branch)).date()
+        # Tạo bản ghi mới cho lịch sử thu hồi (KHÔNG update assignment.status)
+        return_assignment = AssetAssignment(
+            asset_id=asset_assignment.asset_id,
+            employee_id=asset_assignment.employee_id,
+            assigned_date=asset_assignment.assigned_date,
+            return_date=datetime.now(get_branch_timezone(asset.branch)).date(),
+            status='returned',
+            notes=asset_assignment.notes,
+            reclaim_reason=getattr(return_request, 'reclaim_reason', None) or '',
+            reclaim_notes=return_request.notes or '',
+            created_at=asset_assignment.created_at,
+            updated_at=datetime.now(get_branch_timezone(asset.branch)).date()
+        )
+        db.session.add(return_assignment)
         asset.available_quantity += 1
         # Nếu lý do trả là 'Not in use / Idle' hoặc tương đương thì chuyển trạng thái asset về 'Available'
-        reclaim_reason = (return_request.reclaim_reason or '').strip().lower()
+        reclaim_reason = (getattr(return_request, 'reclaim_reason', None) or '').strip().lower()
         if reclaim_reason in ['not in use / idle', '未使用', 'chưa sử dụng', 'không sử dụng']:
             asset.status = 'Available'
         db.session.commit()
