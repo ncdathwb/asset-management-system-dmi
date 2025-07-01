@@ -209,7 +209,9 @@ def index():
     if current_user.is_employee():
         return redirect(url_for('employee_asset_request'))
     filter = request.args.get('filter', 'today')
-    now = datetime.now()
+    branch = session.get('branch')
+    branch_timezone = get_branch_timezone(branch)
+    now = datetime.now(branch_timezone)
     if filter == 'today':
         start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
     elif filter == 'last7':
@@ -820,6 +822,7 @@ def get_employee(id):
             }
             for asset, assign in all_assignments if assign.status == 'assigned'
         ]
+        department_jp = translate(employee.department, 'department', 'ja') if employee.department else ''
         return jsonify({
             'success': True,
             'employee': {
@@ -827,10 +830,11 @@ def get_employee(id):
                 'employee_code': employee.employee_code,
                 'name': employee.name,
                 'department': employee.department,
+                'department_jp': department_jp,
                 'branch': employee.branch,
                 'email': employee.email,
                 'status': employee.status,
-                'created_at': employee.created_at.strftime('%d-%m-%Y %H:%M') if hasattr(employee, 'created_at') else None
+                'created_at': employee.created_at.strftime('%d-%m-%Y %H:%M') if hasattr(employee, 'created_at') and employee.created_at else None
             },
             'assigned_assets': assigned_assets,
         })
@@ -1015,7 +1019,8 @@ def export_employees_csv():
                 status
             ])
         import datetime
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        branch_timezone = get_branch_timezone(session.get('branch', 'vietnam'))
+        timestamp = datetime.datetime.now(branch_timezone).strftime("%Y%m%d_%H%M%S")
         filename = f"employees_{session.get('branch')}_{timestamp}.csv"
         response = Response(
             output.getvalue(),
@@ -1048,7 +1053,8 @@ def export_assets_csv():
                 asset.available_quantity
             ])
         import datetime
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        branch_timezone = get_branch_timezone(session.get('branch', 'vietnam'))
+        timestamp = datetime.datetime.now(branch_timezone).strftime("%Y%m%d_%H%M%S")
         filename = f"assets_{session.get('branch')}_{timestamp}.csv"
         response = Response(
             output.getvalue(),
@@ -1377,6 +1383,24 @@ def get_my_assets():
                 status='pending'
             ).first() is not None
             
+            # Get branch timezone for proper date formatting
+            branch_timezone = get_branch_timezone(asset.branch)
+            
+            # Convert to branch timezone if assigned_date has timezone info, otherwise assume it's in UTC
+            if assignment.assigned_date:
+                if assignment.assigned_date.tzinfo is None:
+                    # If no timezone info, assume UTC and convert to branch timezone
+                    from datetime import timezone
+                    utc_date = assignment.assigned_date.replace(tzinfo=timezone.utc)
+                    local_date = utc_date.astimezone(branch_timezone)
+                else:
+                    # If has timezone info, convert to branch timezone
+                    local_date = assignment.assigned_date.astimezone(branch_timezone)
+                
+                formatted_date = local_date.strftime('%d-%m-%Y %H:%M')
+            else:
+                formatted_date = ''
+            
             result.append({
                 'assignment_id': assignment.id,
                 'asset_id': asset.id,
@@ -1384,7 +1408,7 @@ def get_my_assets():
                 'name': asset.name,
                 'type': asset.type,
                 'status': asset.status,
-                'assigned_date': assignment.assigned_date.strftime('%d-%m-%Y %H:%M'),
+                'assigned_date': formatted_date,
                 'has_pending_return': has_pending_return
             })
         
@@ -2022,7 +2046,8 @@ def restore_db():
         return redirect(url_for('settings'))
     # Backup file cũ trước khi ghi đè
     db_path = os.path.join(os.getcwd(), 'asset_management.db')
-    backup_path = os.path.join(os.getcwd(), f'asset_management_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.db')
+    branch_timezone = get_branch_timezone(session.get('branch', 'vietnam'))
+    backup_path = os.path.join(os.getcwd(), f'asset_management_backup_{datetime.now(branch_timezone).strftime("%Y%m%d_%H%M%S")}.db')
     if os.path.exists(db_path):
         os.rename(db_path, backup_path)
     file.save(db_path)
@@ -2235,9 +2260,26 @@ def get_assignment_history():
 
         result = []
         for log, asset, employee in logs:
-            # Format ngày+giờ
-            date_time = log.date.strftime('%d-%m-%Y %H:%M') if log.date else ''
-            event_date = log.date.strftime('%d-%m-%Y') if log.date else ''
+            # Get branch timezone for proper date formatting
+            branch_timezone = get_branch_timezone(asset.branch)
+            
+            # Convert to branch timezone if log.date has timezone info, otherwise assume it's in UTC
+            if log.date:
+                if log.date.tzinfo is None:
+                    # If no timezone info, assume UTC and convert to branch timezone
+                    from datetime import timezone
+                    utc_date = log.date.replace(tzinfo=timezone.utc)
+                    local_date = utc_date.astimezone(branch_timezone)
+                else:
+                    # If has timezone info, convert to branch timezone
+                    local_date = log.date.astimezone(branch_timezone)
+                
+                date_time = local_date.strftime('%d-%m-%Y %H:%M')
+                event_date = local_date.strftime('%d-%m-%Y')
+            else:
+                date_time = ''
+                event_date = ''
+            
             status = 'assigned' if log.action == 'assigned' else 'returned'
             reason = log.reason or ''
             notes = log.notes or ''
@@ -2339,7 +2381,8 @@ def api_asset_flow():
     branch = session.get('branch')
     filter = request.args.get('filter', 'week') # Default filter to week
     start_date = get_start_date_from_filter(filter)
-    now = datetime.now()
+    branch_timezone = get_branch_timezone(branch)
+    now = datetime.now(branch_timezone)
 
     date_periods = [] # Use a more general name for the list of date objects
     labels = []       # List for the labels displayed on the chart (strings)
@@ -2577,19 +2620,19 @@ def health_check():
             return jsonify({
                 'status': 'healthy',
                 'database': 'connected',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now(pytz.utc).isoformat()
             }), 200
         else:
             return jsonify({
                 'status': 'unhealthy',
                 'database': 'disconnected',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now(pytz.utc).isoformat()
             }), 503
     except Exception as e:
         return jsonify({
             'status': 'error',
             'message': str(e),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now(pytz.utc).isoformat()
         }), 500
 
 @app.route('/set-language/<language>')
@@ -2703,12 +2746,31 @@ def export_assignment_history():
         # Write data
         for assignment, asset, employee in results:
             date = assignment.assigned_date or assignment.return_date
+            
+            # Get branch timezone for proper date formatting
+            branch_timezone = get_branch_timezone(asset.branch)
+            
+            # Convert to branch timezone if date has timezone info, otherwise assume it's in UTC
+            if date:
+                if date.tzinfo is None:
+                    # If no timezone info, assume UTC and convert to branch timezone
+                    from datetime import timezone
+                    utc_date = date.replace(tzinfo=timezone.utc)
+                    local_date = utc_date.astimezone(branch_timezone)
+                else:
+                    # If has timezone info, convert to branch timezone
+                    local_date = date.astimezone(branch_timezone)
+                
+                formatted_date = local_date.strftime('%Y-%m-%d')
+            else:
+                formatted_date = ''
+            
             type_ = '割当' if assignment.status == 'assigned' else '返却'
             status = '割当済み' if assignment.status == 'assigned' else '返却済み'
             notes = assignment.notes if assignment.status == 'assigned' else assignment.reclaim_reason
 
             writer.writerow([
-                date.strftime('%Y-%m-%d') if date else '',
+                formatted_date,
                 type_,
                 employee.employee_code,
                 employee.name,
@@ -2721,7 +2783,8 @@ def export_assignment_history():
             ])
 
         # Create response
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        branch_timezone = get_branch_timezone(session.get('branch', 'vietnam'))
+        timestamp = datetime.now(branch_timezone).strftime("%Y%m%d_%H%M%S")
         filename = f"asset_assignment_history_{session.get('branch')}_{timestamp}.csv"
         
         return Response(
@@ -2741,7 +2804,8 @@ def get_assignment_history_stats():
 
     try:
         branch = session.get('branch')
-        now = datetime.now()
+        branch_timezone = get_branch_timezone(branch)
+        now = datetime.now(branch_timezone)
         
         # Get date range from query params
         start_date = request.args.get('start_date')
@@ -2952,6 +3016,24 @@ def get_asset_assignment_logs():
         
         result = []
         for log, asset, employee in logs:
+            # Get branch timezone for proper date formatting
+            branch_timezone = get_branch_timezone(asset.branch)
+            
+            # Convert to branch timezone if log.date has timezone info, otherwise assume it's in UTC
+            if log.date:
+                if log.date.tzinfo is None:
+                    # If no timezone info, assume UTC and convert to branch timezone
+                    from datetime import timezone
+                    utc_date = log.date.replace(tzinfo=timezone.utc)
+                    local_date = utc_date.astimezone(branch_timezone)
+                else:
+                    # If has timezone info, convert to branch timezone
+                    local_date = log.date.astimezone(branch_timezone)
+                
+                formatted_date = local_date.strftime('%Y-%m-%d %H:%M')
+            else:
+                formatted_date = None
+            
             result.append({
                 'id': log.id,
                 'asset_id': log.asset_id,
@@ -2963,7 +3045,7 @@ def get_asset_assignment_logs():
                 'employee_name': employee.name,
                 'employee_department': employee.department,
                 'action': log.action,
-                'date': log.date.strftime('%Y-%m-%d %H:%M') if log.date else None,
+                'date': formatted_date,
                 'notes': log.notes,
                 'reason': log.reason
             })

@@ -5,6 +5,7 @@ Script để tạo bảng asset_log trên PostgreSQL
 import psycopg2
 import os
 from datetime import datetime
+from pytz import timezone
 
 def create_asset_log_table_postgresql():
     """Tạo bảng asset_log trong PostgreSQL database"""
@@ -116,7 +117,7 @@ def test_asset_log_postgresql():
             'asset_id': 1,
             'employee_id': 1,
             'action': 'assigned',
-            'date': datetime.now(),
+            'date': datetime.now(timezone('Asia/Ho_Chi_Minh')),
             'notes': 'Test log entry PostgreSQL',
             'reason': None
         }

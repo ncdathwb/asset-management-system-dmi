@@ -11,6 +11,7 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash
 import getpass
 from dotenv import load_dotenv
+from pytz import timezone
 load_dotenv()
 
 # Thêm thư mục hiện tại vào Python path
@@ -33,7 +34,7 @@ def create_initial_accounts():
             email='admin@dmi.com',
             role='super_admin',
             branch='vietnam',
-            created_at=datetime.now()
+            created_at=datetime.now(timezone('Asia/Ho_Chi_Minh'))
         )
         
         # Tạo tài khoản Branch Admin
@@ -43,7 +44,7 @@ def create_initial_accounts():
             email='manager@dmi.com',
             role='branch_admin',
             branch='vietnam',
-            created_at=datetime.now()
+            created_at=datetime.now(timezone('Asia/Ho_Chi_Minh'))
         )
         
         # Tạo tài khoản Employee
@@ -53,7 +54,7 @@ def create_initial_accounts():
             email='employee@dmi.com',
             role='employee',
             branch='vietnam',
-            created_at=datetime.now()
+            created_at=datetime.now(timezone('Asia/Ho_Chi_Minh'))
         )
         
         try:
@@ -176,7 +177,7 @@ def create_account_interactive():
             email=email,
             role=role,
             branch=branch,
-            created_at=datetime.now()
+            created_at=datetime.now(timezone('Asia/Ho_Chi_Minh'))
         )
         try:
             db.session.add(user)
