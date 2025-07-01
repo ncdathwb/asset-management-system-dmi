@@ -10,7 +10,7 @@ load_dotenv()
 from datetime import datetime, timedelta
 from flask_paginate import Pagination, get_page_parameter
 import pytz
-from models import User, Employee, Asset, AssetAssignment, Department, AssetType, AssetReturnRequest, AssetRequest
+from models import User, Employee, Asset, AssetAssignment, Department, AssetType, AssetReturnRequest, AssetRequest, AssetLog
 from extensions import db, migrate
 from werkzeug.utils import secure_filename
 import sqlite3
@@ -1176,6 +1176,16 @@ def approve_asset_request(id):
             created_at=approval_date,
             updated_at=approval_date
         )
+        # Ghi log lịch sử cấp phát
+        history = AssetLog(
+            asset_id=asset_request.asset_id,
+            employee_id=asset_request.employee_id,
+            action='assigned',
+            date=approval_date,
+            notes=asset_request.notes,
+            reason=None
+        )
+        db.session.add(history)
         
         # Update available asset quantity
         asset.available_quantity -= 1
@@ -2037,24 +2047,15 @@ def reclaim_asset_assignment(assignment_id):
         reason = request.form.get('reason') or request.json.get('reason')
         if not reason:
             return jsonify({'success': False, 'message': 'Please enter reclaim reason'}), 400
-        # Get notes from request and save it to reclaim_notes
         notes = request.form.get('notes') or request.json.get('notes')
         reclaim_notes = notes if notes is not None else ''
-        # Tạo bản ghi mới cho lịch sử thu hồi (KHÔNG update assignment.status)
+        # Update assignment cũ thay vì tạo mới
         current_time = datetime.now(get_branch_timezone(asset.branch))
-        return_assignment = AssetAssignment(
-            asset_id=assignment.asset_id,
-            employee_id=assignment.employee_id,
-            assigned_date=assignment.assigned_date,
-            return_date=current_time,
-            status='returned',
-            notes=assignment.notes,
-            reclaim_reason=reason,
-            reclaim_notes=reclaim_notes,
-            created_at=assignment.created_at,
-            updated_at=current_time
-        )
-        db.session.add(return_assignment)
+        assignment.status = 'returned'
+        assignment.return_date = current_time
+        assignment.reclaim_reason = reason
+        assignment.reclaim_notes = reclaim_notes
+        assignment.updated_at = current_time
         # Cập nhật số lượng tài sản về kho
         if asset:
             asset.available_quantity += 1
@@ -2071,6 +2072,16 @@ def reclaim_asset_assignment(assignment_id):
             else:
                 asset.status = 'Available'
         db.session.commit()
+        # Ghi log lịch sử thu hồi
+        history = AssetLog(
+            asset_id=assignment.asset_id,
+            employee_id=assignment.employee_id,
+            action='returned',
+            date=current_time,
+            notes=reclaim_notes,
+            reason=reason
+        )
+        db.session.add(history)
         return jsonify({'success': True, 'message': 'Asset reclaimed successfully'})
     except Exception as e:
         db.session.rollback()
@@ -2108,8 +2119,16 @@ def admin_assign_asset():
             created_at=current_time,
             updated_at=current_time
         )
-        # Ghi nhận người cấp phát (nếu muốn, có thể thêm trường assigned_by vào model)
-        # assignment.assigned_by = current_user.id
+        # Ghi log lịch sử cấp phát
+        history = AssetLog(
+            asset_id=asset.id,
+            employee_id=employee.id,
+            action='assigned',
+            date=current_time,
+            notes=notes if notes is not None else '',
+            reason=None
+        )
+        db.session.add(history)
         asset.available_quantity -= 1
         asset.status = 'In Use'
         db.session.add(assignment)
@@ -2151,151 +2170,89 @@ def get_active_employees():
 @app.route('/api/asset-assignment-history', methods=['GET'])
 @login_required
 def get_assignment_history():
-    """API để lấy toàn bộ lịch sử cấp phát và thu hồi tài sản."""
     # Chỉ admin hoặc super admin mới được xem lịch sử
     if not (current_user.is_super_admin() or current_user.is_branch_admin()):
         return jsonify({'success': False, 'message': 'You do not have permission to view history'}), 403
 
     try:
-        # Lấy tham số status và search query từ query string
+        # Lấy tham số filter
         status_filter = request.args.get('status')
         search_query = request.args.get('search_query')
-        assigned_date_start = request.args.get('assigned_date_start')
-        assigned_date_end = request.args.get('assigned_date_end')
-        return_date_start = request.args.get('return_date_start')
-        return_date_end = request.args.get('return_date_end')
+        date_start = request.args.get('assigned_date_start')
+        date_end = request.args.get('assigned_date_end')
         department_filter = request.args.get('department')
-
-        # Get pagination parameters
         page = request.args.get(get_page_parameter(), type=int, default=1)
-        per_page = 5
+        per_page = int(request.args.get('per_page', 10))
 
-        # Bắt đầu query - lấy tất cả bản ghi assignment (cả assigned và returned)
-        assignment_history_query = db.session.query(
-            AssetAssignment, Asset, Employee
+        # Query asset_log join asset, employee
+        query = db.session.query(
+            AssetLog, Asset, Employee
         ).join(
-            Asset, AssetAssignment.asset_id == Asset.id
+            Asset, AssetLog.asset_id == Asset.id
         ).join(
-            Employee, AssetAssignment.employee_id == Employee.id
+            Employee, AssetLog.employee_id == Employee.id
         ).filter(
-            Asset.branch == session.get('branch') # Lọc theo chi nhánh tài sản
+            Asset.branch == session.get('branch')
         )
 
-        # Áp dụng bộ lọc status nếu có
+        # Filter status (action)
         if status_filter:
-            assignment_history_query = assignment_history_query.filter(AssetAssignment.status == status_filter)
-
-        # Áp dụng tìm kiếm nếu có search query
+            query = query.filter(AssetLog.action == status_filter)
+        # Filter department
+        if department_filter:
+            query = query.filter(Employee.department == department_filter)
+        # Filter search
         if search_query:
             search_pattern = f'%{search_query}%'
-            assignment_history_query = assignment_history_query.filter(
+            query = query.filter(
                 db.or_(
                     Asset.asset_code.ilike(search_pattern),
                     Asset.name.ilike(search_pattern),
+                    Asset.type.ilike(search_pattern),
                     Employee.employee_code.ilike(search_pattern),
                     Employee.name.ilike(search_pattern),
                     Employee.department.ilike(search_pattern),
-                    AssetAssignment.notes.ilike(search_pattern),
-                    AssetAssignment.reclaim_reason.ilike(search_pattern),
-                    Asset.type.ilike(search_pattern),
-                    Employee.email.ilike(search_pattern),
-                    AssetAssignment.reclaim_notes.ilike(search_pattern)
+                    AssetLog.notes.ilike(search_pattern),
+                    AssetLog.reason.ilike(search_pattern)
                 )
             )
-
-        # Áp dụng bộ lọc ngày cấp phát
-        if assigned_date_start:
+        # Filter date
+        if date_start:
             try:
-                start_date = datetime.strptime(assigned_date_start, '%Y-%m-%d')
-                assignment_history_query = assignment_history_query.filter(AssetAssignment.assigned_date >= start_date)
+                start_date = datetime.strptime(date_start, '%Y-%m-%d')
+                query = query.filter(AssetLog.date >= start_date)
             except ValueError:
-                pass # Ignore invalid date format
-        if assigned_date_end:
+                pass
+        if date_end:
             try:
-                end_date = datetime.strptime(assigned_date_end, '%Y-%m-%d')
-                # Add one day to include the end date fully
-                end_date = end_date + timedelta(days=1)
-                assignment_history_query = assignment_history_query.filter(AssetAssignment.assigned_date < end_date)
+                end_date = datetime.strptime(date_end, '%Y-%m-%d') + timedelta(days=1)
+                query = query.filter(AssetLog.date < end_date)
             except ValueError:
-                pass # Ignore invalid date format
+                pass
 
-        # Áp dụng bộ lọc ngày trả
-        if return_date_start:
-            try:
-                start_date = datetime.strptime(return_date_start, '%Y-%m-%d')
-                assignment_history_query = assignment_history_query.filter(AssetAssignment.return_date >= start_date)
-            except ValueError:
-                pass # Ignore invalid date format
-        if return_date_end:
-            try:
-                end_date = datetime.strptime(return_date_end, '%Y-%m-%d')
-                 # Add one day to include the end date fully
-                end_date = end_date + timedelta(days=1)
-                assignment_history_query = assignment_history_query.filter(AssetAssignment.return_date < end_date)
-            except ValueError:
-                pass # Ignore invalid date format
-
-        # Áp dụng bộ lọc phòng ban
-        if department_filter:
-            assignment_history_query = assignment_history_query.filter(Employee.department == department_filter)
-
-        # Get total count before pagination
-        total = assignment_history_query.count()
-
-        # Apply pagination
-        assignment_history = assignment_history_query.order_by(
-            # Order by the latest date between assigned_date and return_date
-            db.case(
-                (AssetAssignment.return_date.isnot(None), AssetAssignment.return_date),
-                else_=AssetAssignment.assigned_date
-            ).desc()
-        ).\
-            offset((page - 1) * per_page).\
-            limit(per_page).all()
+        total = query.count()
+        logs = query.order_by(AssetLog.date.desc()).offset((page-1)*per_page).limit(per_page).all()
 
         result = []
-        for assignment, asset, employee in assignment_history:
-            # Get branch timezone for date formatting
-            branch_timezone = get_branch_timezone(asset.branch)
-            
-            # Format dates according to branch timezone - handle timezone properly
-            assigned_date = None
-            return_date = None
-            
-            if assignment.assigned_date:
-                if assignment.assigned_date.tzinfo is None:
-                    # If no timezone info, assume it's in UTC and convert
-                    assigned_date = assignment.assigned_date.replace(tzinfo=pytz.UTC).astimezone(branch_timezone)
-                else:
-                    assigned_date = assignment.assigned_date.astimezone(branch_timezone)
-            
-            if assignment.return_date:
-                if assignment.return_date.tzinfo is None:
-                    # If no timezone info, assume it's in UTC and convert
-                    return_date = assignment.return_date.replace(tzinfo=pytz.UTC).astimezone(branch_timezone)
-                else:
-                    return_date = assignment.return_date.astimezone(branch_timezone)
-            
-            # Xác định loại sự kiện và ngày hiển thị
-            event_date = return_date if assignment.status == 'returned' else assigned_date
-            event_type = 'returned' if assignment.status == 'returned' else 'assigned'
-            
+        for log, asset, employee in logs:
+            # Format ngày+giờ
+            date_time = log.date.strftime('%d-%m-%Y %H:%M') if log.date else ''
+            event_date = log.date.strftime('%d-%m-%Y') if log.date else ''
+            status = 'assigned' if log.action == 'assigned' else 'returned'
+            reason = log.reason or ''
+            notes = log.notes or ''
             result.append({
-                'assignment_id': assignment.id,
-                'asset_code': asset.asset_code,
-                'asset_name': asset.name,
-                'asset_type': asset.type,
-                'employee_code': employee.employee_code,
+                'date_time': date_time,
+                'date': event_date,
                 'employee_name': employee.name,
-                'employee_department': employee.department,
-                'assigned_date': assigned_date.strftime('%d-%m-%Y %H:%M') if assigned_date else None,
-                'return_date': return_date.strftime('%d-%m-%Y %H:%M') if return_date else None,
-                'event_date': event_date.strftime('%d-%m-%Y %H:%M') if event_date else None,
-                'event_type': event_type,
-                'reclaim_reason': assignment.reclaim_reason,
-                'status': assignment.status,
-                'notes': assignment.notes,
-                'reclaim_notes': assignment.reclaim_notes
+                'employee_code': employee.employee_code,
+                'employee_department': employee.department or '',
+                'asset_name': asset.name,
+                'asset_code': asset.asset_code,
+                'asset_type': asset.type,
+                'status': status,
+                'reason': reason,
+                'notes': notes
             })
 
         # Lấy danh sách phòng ban cho bộ lọc
@@ -2311,7 +2268,6 @@ def get_assignment_history():
             'per_page': per_page,
             'pages': (total + per_page - 1) // per_page
         })
-
     except Exception as e:
         print(f"Error in get_assignment_history: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -2522,21 +2478,13 @@ def bulk_reclaim_assets():
                 continue
             if asset.branch != session.get('branch') or employee.branch != session.get('branch'):
                 continue
-            # Tạo bản ghi mới cho lịch sử thu hồi (KHÔNG update assignment.status)
+            # Update assignment cũ thay vì tạo mới
             current_time = datetime.now(get_branch_timezone(asset.branch))
-            return_assignment = AssetAssignment(
-                asset_id=assignment.asset_id,
-                employee_id=assignment.employee_id,
-                assigned_date=assignment.assigned_date,
-                return_date=current_time,
-                status='returned',
-                notes=assignment.notes,
-                reclaim_reason=reason,
-                reclaim_notes=notes if notes is not None else '',
-                created_at=assignment.created_at,
-                updated_at=current_time
-            )
-            db.session.add(return_assignment)
+            assignment.status = 'returned'
+            assignment.return_date = current_time
+            assignment.reclaim_reason = reason
+            assignment.reclaim_notes = notes if notes is not None else ''
+            assignment.updated_at = current_time
             # Cập nhật số lượng tài sản
             asset.available_quantity += 1
             # Cập nhật trạng thái asset dựa trên lý do
@@ -2552,6 +2500,16 @@ def bulk_reclaim_assets():
             else:
                 asset.status = 'Available'
             count_success += 1
+            # Ghi log lịch sử thu hồi
+            history = AssetLog(
+                asset_id=assignment.asset_id,
+                employee_id=assignment.employee_id,
+                action='returned',
+                date=current_time,
+                notes=notes if notes is not None else '',
+                reason=reason
+            )
+            db.session.add(history)
         db.session.commit()
         # Trả về message tiếng Nhật
         if count_success == 1:
@@ -2923,6 +2881,114 @@ def handle_disconnection_error(error):
     
     flash('Database connection lost. Please try again.', 'error')
     return redirect(url_for('login'))
+
+@app.route('/api/asset-assignment-logs', methods=['GET'])
+@login_required
+def get_asset_assignment_logs():
+    if not (current_user.is_super_admin() or current_user.is_branch_admin()):
+        return jsonify({'success': False, 'message': '権限がありません'}), 403
+    try:
+        # Lọc theo branch hiện tại
+        branch = session.get('branch')
+        # Lấy các tham số lọc nếu cần
+        asset_id = request.args.get('asset_id')
+        employee_id = request.args.get('employee_id')
+        action = request.args.get('action')
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 10))
+        
+        # Query với join để lấy thông tin chi tiết
+        query = db.session.query(
+            AssetLog, Asset, Employee
+        ).join(
+            Asset, AssetLog.asset_id == Asset.id
+        ).join(
+            Employee, AssetLog.employee_id == Employee.id
+        )
+        
+        if asset_id:
+            query = query.filter(AssetLog.asset_id == asset_id)
+        if employee_id:
+            query = query.filter(AssetLog.employee_id == employee_id)
+        if action:
+            query = query.filter(AssetLog.action == action)
+        
+        # Tìm kiếm theo tên asset, employee, code
+        search_query = request.args.get('search_query')
+        if search_query:
+            search_pattern = f'%{search_query}%'
+            query = query.filter(
+                db.or_(
+                    Asset.asset_code.ilike(search_pattern),
+                    Asset.name.ilike(search_pattern),
+                    Asset.type.ilike(search_pattern),
+                    Employee.employee_code.ilike(search_pattern),
+                    Employee.name.ilike(search_pattern),
+                    Employee.department.ilike(search_pattern),
+                    AssetLog.notes.ilike(search_pattern),
+                    AssetLog.reason.ilike(search_pattern)
+                )
+            )
+        
+        # Lọc theo ngày
+        date_filter = request.args.get('date')
+        if date_filter:
+            try:
+                filter_date = datetime.strptime(date_filter, '%Y-%m-%d')
+                next_date = filter_date + timedelta(days=1)
+                query = query.filter(
+                    AssetLog.date >= filter_date,
+                    AssetLog.date < next_date
+                )
+            except ValueError:
+                pass  # Ignore invalid date format
+        
+        # Lọc theo branch
+        if branch:
+            query = query.filter(Asset.branch == branch)
+        
+        total = query.count()
+        logs = query.order_by(AssetLog.date.desc()).offset((page-1)*per_page).limit(per_page).all()
+        
+        result = []
+        for log, asset, employee in logs:
+            result.append({
+                'id': log.id,
+                'asset_id': log.asset_id,
+                'asset_code': asset.asset_code,
+                'asset_name': asset.name,
+                'asset_type': asset.type,
+                'employee_id': log.employee_id,
+                'employee_code': employee.employee_code,
+                'employee_name': employee.name,
+                'employee_department': employee.department,
+                'action': log.action,
+                'date': log.date.strftime('%Y-%m-%d %H:%M') if log.date else None,
+                'notes': log.notes,
+                'reason': log.reason
+            })
+        
+        return jsonify({
+            'success': True, 
+            'logs': result, 
+            'total': total, 
+            'page': page, 
+            'per_page': per_page,
+            'pages': (total + per_page - 1) // per_page
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/asset-logs')
+@login_required
+def asset_logs():
+    """Route để hiển thị trang log chi tiết tài sản."""
+    # Chỉ admin hoặc super admin mới được xem trang này
+    if not (current_user.is_super_admin() or current_user.is_branch_admin()):
+        flash(_('Permission denied. Only Admins can view asset logs.'), 'error')
+        return redirect(url_for('index'))
+        
+    return render_template('asset_logs.html')
 
 if __name__ == '__main__':
     with app.app_context():

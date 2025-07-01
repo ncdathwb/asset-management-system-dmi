@@ -1,41 +1,30 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('資産割当履歴') }}{% endblock %}
+{% block title %}{{ _('資産ログ') }}{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h2 class="mb-4" style="font-weight:700; letter-spacing:1px;">{{ _('資産割当履歴') }}</h2>
+    <h2 class="mb-4" style="font-weight:700; letter-spacing:1px;">{{ _('資産ログ') }}</h2>
     
     <div class="card mb-4 shadow-sm" style="border-radius: 16px;">
         <div class="card-body">
             <form class="row g-3 filter-form">
-                <div class="col-md-4">
-                    <input type="text" class="form-control" id="searchInput" placeholder="{{ _('履歴を検索...') }}">
+                <div class="col-md-3">
+                    <input type="text" class="form-control" id="searchInput" placeholder="{{ _('ログを検索...') }}">
                 </div>
-                <div class="col-md-4">
-                    <select class="form-select" id="statusFilter">
-                        <option value="">すべてのステータス</option>
-                        <option value="assigned">割当済み</option>
-                        <option value="returned">返却済み</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <select class="form-select" id="departmentFilter">
-                        <option value="">すべての部署</option>
+                <div class="col-md-3">
+                    <select class="form-select" id="actionFilter">
+                        <option value="">すべてのアクション</option>
+                        <option value="assigned">割当</option>
+                        <option value="returned">返却</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label for="assignedDateStart" class="form-label">日付の開始</label>
-                    <input type="date" class="form-control" id="assignedDateStart">
+                    <input type="date" class="form-control" id="dateFilter" placeholder="日付でフィルター">
                 </div>
                 <div class="col-md-3">
-                    <label for="assignedDateEnd" class="form-label">日付の終了</label>
-                    <input type="date" class="form-control" id="assignedDateEnd">
-                </div>
-                <div class="col-md-4 d-flex align-items-end">
                     <label for="perPageSelect" class="form-label me-2 mb-0">表示件数</label>
                     <select id="perPageSelect" class="form-select w-auto">
-                        <option value="5">5</option>
                         <option value="10" selected>10</option>
                         <option value="20">20</option>
                         <option value="50">50</option>
@@ -49,14 +38,13 @@
     <div class="card shadow-sm" style="border-radius: 16px;">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover align-middle" id="historyTable" style="border-radius: 12px; overflow: hidden;">
+                <table class="table table-hover align-middle" id="logTable" style="border-radius: 12px; overflow: hidden;">
                     <thead class="table-light">
                         <tr>
-                            <th>{{ _('日付') }}</th>
-                            <th>{{ _('部署') }}</th>
+                            <th>{{ _('日時') }}</th>
+                            <th>{{ _('アクション') }}</th>
                             <th>{{ _('従業員') }}</th>
                             <th>{{ _('資産') }}</th>
-                            <th>{{ _('ステータス') }}</th>
                             <th>{{ _('理由') }}</th>
                             <th>{{ _('メモ') }}</th>
                         </tr>
@@ -80,131 +68,118 @@
 var currentPerPage = 10;
 
 $(document).ready(function() {
-    loadAssignmentHistory();
-    loadDepartmentsForFilter();
-
+    // Load data when page loads
+    loadAssetLogs();
+    
+    // Search functionality
     $('#searchInput').on('keyup', function() {
-        loadAssignmentHistory();
+        loadAssetLogs();
     });
-    $('#statusFilter').change(function() {
-        loadAssignmentHistory();
+
+    // Action filter
+    $('#actionFilter').change(function() {
+        loadAssetLogs();
     });
-    $('#departmentFilter').change(function() {
-        loadAssignmentHistory();
+
+    // Date filter
+    $('#dateFilter').change(function() {
+        loadAssetLogs();
     });
-    $('#assignedDateStart, #assignedDateEnd').change(function() {
-        loadAssignmentHistory();
-    });
+
     $('#perPageSelect').on('change', function() {
         currentPerPage = parseInt($(this).val());
-        loadAssignmentHistory(1, currentPerPage);
+        loadAssetLogs(1, currentPerPage);
     });
 });
 
-function loadDepartmentsForFilter() {
-    $.ajax({
-        url: '/api/settings/departments',
-        method: 'GET',
-        success: function(response) {
-            const departmentFilter = $('#departmentFilter');
-            if (response.success && response.departments) {
-                response.departments.forEach(function(dept) {
-                    departmentFilter.append($('<option>').val(dept.name).text(dept.name));
-                });
-            }
-        },
-        error: function() {
-            console.error('部署の読み込み中にエラーが発生しました。');
-        }
-    });
+function translateAction(action) {
+    const actionMap = {
+        'assigned': '割当',
+        'returned': '返却'
+    };
+    return actionMap[action] || action;
 }
 
-function translateStatus(status) {
-    const statusMap = {
-        'assigned': '割当済み',
-        'returned': '返却済み'
-    };
-    return statusMap[status] || status;
-}
-function translateReason(reason) {
-    const map = {
-        'Not in use / Idle': '未使用',
-        'Damaged': '故障',
-        'Lost': '紛失',
-        'Under maintenance': 'メンテナンス中',
-        'In Use': '使用中',
-        'Other': 'その他',
-        '': ''
-    };
-    return map[reason] || reason;
-}
-function loadAssignmentHistory(page = 1, per_page) {
+function loadAssetLogs(page = 1, per_page) {
     if (!per_page) per_page = currentPerPage;
-    var status = $('#statusFilter').val();
     var search_query = $('#searchInput').val();
-    var assigned_date_start = $('#assignedDateStart').val();
-    var assigned_date_end = $('#assignedDateEnd').val();
-    var department = $('#departmentFilter').val();
+    var action = $('#actionFilter').val();
+    var date = $('#dateFilter').val();
 
-    var url = '/api/asset-assignment-history';
+    var url = '/api/asset-assignment-logs';
     var params = {
         page: page,
         per_page: per_page
     };
-    if (status) params.status = status;
+
     if (search_query) params.search_query = search_query;
-    if (assigned_date_start) params.assigned_date_start = assigned_date_start;
-    if (assigned_date_end) params.assigned_date_end = assigned_date_end;
-    if (department) params.department = department;
+    if (action) params.action = action;
+    if (date) params.date = date;
+
     url += '?' + $.param(params);
 
     $.ajax({
         url: url,
         method: 'GET',
         success: function(response) {
-            var tableBody = $('#historyTable tbody');
+            var tableBody = $('#logTable tbody');
             tableBody.empty();
-            if (response.success && response.history.length > 0) {
-                response.history.forEach(function(item) {
+
+            if (response.success && response.logs.length > 0) {
+                response.logs.forEach(function(log) {
                     var row = $('<tr>');
-                    row.append($('<td>').text(item.date_time || item.date));
-                    row.append($('<td>').text(item.employee_department || ''));
-                    row.append($('<td>').text(item.employee_name + ' (' + item.employee_code + ')'));
-                    row.append($('<td>').text(item.asset_name + ' (' + item.asset_code + ')'));
-                    row.append($('<td>').text(translateStatus(item.status)));
-                    row.append($('<td>').text(item.status === 'assigned' ? '使用' : translateReason(item.reason)));
-                    row.append($('<td>').text(item.notes || ''));
-                    row.addClass(item.status === 'assigned' ? 'table-primary' : 'table-success');
+                    row.append($('<td>').text(log.date || ''));
+                    row.append($('<td>').text(translateAction(log.action)));
+                    row.append($('<td>').text(log.employee_name + ' (' + log.employee_code + ') - ' + log.employee_department));
+                    row.append($('<td>').text(log.asset_name + ' (' + log.asset_code + ') - ' + log.asset_type));
+                    row.append($('<td>').text(log.reason || ''));
+                    row.append($('<td>').text(log.notes || ''));
+                    
+                    // Add color based on action
+                    if (log.action === 'assigned') {
+                        row.addClass('table-primary');
+                    } else if (log.action === 'returned') {
+                        row.addClass('table-success');
+                    }
+                    
                     tableBody.append(row);
                 });
+
                 generatePagination(response.total, response.page, response.per_page, response.pages);
-            } else if (response.success && response.history.length === 0) {
-                var emptyRow = $('<tr>').append($('<td colspan="12" class="text-center">'+ '選択したフィルターに一致する履歴が見つかりません。' +'</td>'));
+
+            } else if (response.success && response.logs.length === 0) {
+                var emptyRow = $('<tr>').append($('<td colspan="6" class="text-center">'+ '選択したフィルターに一致するログが見つかりません。' +'</td>'));
                 tableBody.append(emptyRow);
                 $('#paginationControls').empty();
+
             } else {
-                var errorRow = $('<tr>').append($('<td colspan="12" class="text-center text-danger">'+ '履歴の読み込み中にエラーが発生しました: ' + (response.message || '不明なエラー') + '</td>'));
+                var errorRow = $('<tr>').append($('<td colspan="6" class="text-center text-danger">'+ 'ログの読み込み中にエラーが発生しました: ' + (response.message || '不明なエラー') + '</td>'));
                 tableBody.append(errorRow);
                 $('#paginationControls').empty();
             }
         },
         error: function(xhr, status, error) {
-            var tableBody = $('#historyTable tbody');
+            var tableBody = $('#logTable tbody');
             tableBody.empty();
-            var errorRow = $('<tr>').append($('<td colspan="12" class="text-center text-danger">'+ '履歴の取得中にエラーが発生しました。' +'</td>'));
+            var errorRow = $('<tr>').append($('<td colspan="6" class="text-center text-danger">'+ 'ログの取得中にエラーが発生しました。' +'</td>'));
             tableBody.append(errorRow);
             $('#paginationControls').empty();
-            console.error("Error fetching assignment history:", xhr.responseText);
+            console.error("Error fetching asset logs:", xhr.responseText);
         }
     });
 }
+
 function generatePagination(total, currentPage, perPage, totalPages) {
     const paginationContainer = $('#paginationControls');
     paginationContainer.empty();
+
     if (totalPages <= 1) {
         return;
     }
+
     const ul = $('<ul class="pagination justify-content-center"></ul>');
+
+    // Previous button
     ul.append(`
         <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
             <a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Previous">
@@ -212,8 +187,11 @@ function generatePagination(total, currentPage, perPage, totalPages) {
             </a>
         </li>
     `);
+
+    // Page numbers
     let startPage = Math.max(1, currentPage - 2);
     let endPage = Math.min(totalPages, currentPage + 2);
+
     const displayPages = 5;
     if (endPage - startPage + 1 < displayPages) {
         if (currentPage <= Math.ceil(displayPages / 2)) {
@@ -222,6 +200,7 @@ function generatePagination(total, currentPage, perPage, totalPages) {
             startPage = Math.max(1, totalPages - displayPages + 1);
         }
     }
+
     if (startPage > 1) {
         ul.append(`
             <li class="page-item">
@@ -232,6 +211,7 @@ function generatePagination(total, currentPage, perPage, totalPages) {
             ul.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
         }
     }
+
     for (let i = startPage; i <= endPage; i++) {
         ul.append(`
             <li class="page-item ${i === currentPage ? 'active' : ''}">
@@ -239,6 +219,7 @@ function generatePagination(total, currentPage, perPage, totalPages) {
             </li>
         `);
     }
+
     if (endPage < totalPages) {
         if (endPage < totalPages - 1) {
             ul.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
@@ -249,6 +230,8 @@ function generatePagination(total, currentPage, perPage, totalPages) {
             </li>
         `);
     }
+
+    // Next button
     ul.append(`
         <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
             <a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Next">
@@ -256,12 +239,15 @@ function generatePagination(total, currentPage, perPage, totalPages) {
             </a>
         </li>
     `);
+
     paginationContainer.append(ul);
+
+    // Attach click handlers to pagination links
     paginationContainer.find('.page-link').on('click', function(e) {
         e.preventDefault();
         const newPage = $(this).data('page');
         if (newPage > 0 && newPage <= totalPages && newPage !== currentPage) {
-            loadAssignmentHistory(newPage, perPage);
+            loadAssetLogs(newPage, perPage);
         }
     });
 }
@@ -306,10 +292,5 @@ function generatePagination(total, currentPage, perPage, totalPages) {
     padding: 12px 16px;
     vertical-align: middle;
 }
-.btn-primary {
-    border-radius: 8px;
-    font-weight: 500;
-    padding: 8px 20px;
-}
 </style>
-{% endblock %}
+{% endblock %} 
