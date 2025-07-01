@@ -69,7 +69,8 @@
                             <th>{{ _('従業員') }}</th>
                             <th>{{ _('資産') }}</th>
                             <th>{{ _('ステータス') }}</th>
-                            <th>{{ _('備考') }}</th>
+                            <th>{{ _('理由') }}</th>
+                            <th>{{ _('メモ') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -227,6 +228,7 @@ function loadAssignmentHistory(page = 1, per_page) {
 
             if (response.success && response.history.length > 0) {
                 response.history.forEach(function(item) {
+                    console.log('DEBUG item:', item);
                     var row = $('<tr>');
                     var date = item.assigned_date || item.return_date;
                     row.append($('<td>').text(formatDate(date)));
@@ -234,16 +236,17 @@ function loadAssignmentHistory(page = 1, per_page) {
                     row.append($('<td>').text(item.asset_name + ' (' + item.asset_code + ')'));
                     var status = item.status === 'assigned' ? '割当済み' : '返却済み';
                     row.append($('<td>').text(status));
-                    var notes = '';
+                    var reason = '';
+                    var memo = '';
                     if (item.status === 'assigned') {
-                        notes = '';
+                        reason = '使用';
+                        memo = item.notes || '';
                     } else {
-                        let reasons = [];
-                        if (item.reclaim_reason) reasons.push('理由: ' + translateReason(item.reclaim_reason));
-                        if (item.reclaim_notes) reasons.push('メモ: ' + item.reclaim_notes);
-                        notes = reasons.join(' | ') || 'なし';
+                        reason = translateReason(item.reclaim_reason) || '';
+                        memo = item.reclaim_notes || '';
                     }
-                    row.append($('<td>').text(notes));
+                    row.append($('<td>').text(reason));
+                    row.append($('<td>').text(memo));
                     row.addClass(item.status === 'assigned' ? 'table-primary' : 'table-success');
                     
                     tableBody.append(row);

@@ -306,14 +306,17 @@ class AssetRequest(db.Model):
         self.approval_date = datetime.now(get_branch_timezone(self.asset.branch))
 
 class AssetAssignmentHistory(db.Model):
+    __tablename__ = 'asset_assignment_history'
     id = db.Column(db.Integer, primary_key=True)
-    assignment_id = db.Column(db.Integer, db.ForeignKey('asset_assignment.id'))
-    changed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    change_date = db.Column(db.DateTime, default=datetime.utcnow)
-    change_type = db.Column(db.String(50))  # 'status_change', 'note_update', etc.
-    old_value = db.Column(db.String(500))
-    new_value = db.Column(db.String(500))
-    branch = db.Column(db.String(50))  # To track which branch the change occurred in
+    asset_id = db.Column(db.Integer, db.ForeignKey('asset.id'))
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'))
+    event_type = db.Column(db.String(20))  # 'assigned' hoặc 'returned'
+    event_time = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.String(255))
+    reclaim_reason = db.Column(db.String(255))
+    reclaim_notes = db.Column(db.String(255))
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))  # Ai thực hiện
+    # Có thể bổ sung các trường khác nếu cần
 
     def __repr__(self):
-        return f'<AssetAssignmentHistory {self.id}>'
+        return f'<AssetAssignmentHistory {self.id} {self.event_type} asset={self.asset_id} employee={self.employee_id}>'

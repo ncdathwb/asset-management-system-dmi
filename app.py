@@ -2003,14 +2003,24 @@ def reclaim_asset_assignment(assignment_id):
         reason = request.form.get('reason') or request.json.get('reason')
         if not reason:
             return jsonify({'success': False, 'message': 'Please enter reclaim reason'}), 400
-        # Cập nhật trạng thái và lý do
-        assignment.status = 'returned'
-        assignment.return_date = datetime.now(get_branch_timezone(asset.branch)).date()
-        assignment.reclaim_reason = reason
         # Get notes from request and save it to reclaim_notes
         notes = request.form.get('notes') or request.json.get('notes')
-        assignment.reclaim_notes = notes if notes is not None else '' # Save notes to the new column
-        # Cập nhật số lượng tài sản
+        reclaim_notes = notes if notes is not None else ''
+        # Tạo bản ghi mới cho lịch sử thu hồi (KHÔNG update assignment.status)
+        return_assignment = AssetAssignment(
+            asset_id=assignment.asset_id,
+            employee_id=assignment.employee_id,
+            assigned_date=assignment.assigned_date,
+            return_date=datetime.now(get_branch_timezone(asset.branch)).date(),
+            status='returned',
+            notes=assignment.notes,
+            reclaim_reason=reason,
+            reclaim_notes=reclaim_notes,
+            created_at=assignment.created_at,
+            updated_at=datetime.now(get_branch_timezone(asset.branch)).date()
+        )
+        db.session.add(return_assignment)
+        # Cập nhật số lượng tài sản về kho
         if asset:
             asset.available_quantity += 1
             # Update asset status based on reason
@@ -2212,9 +2222,23 @@ def get_assignment_history():
             # Get branch timezone for date formatting
             branch_timezone = get_branch_timezone(asset.branch)
             
-            # Format dates according to branch timezone
-            assigned_date = assignment.assigned_date.astimezone(branch_timezone) if assignment.assigned_date else None
-            return_date = assignment.return_date.astimezone(branch_timezone) if assignment.return_date else None
+            # Format dates according to branch timezone - handle timezone properly
+            assigned_date = None
+            return_date = None
+            
+            if assignment.assigned_date:
+                if assignment.assigned_date.tzinfo is None:
+                    # If no timezone info, assume it's in UTC and convert
+                    assigned_date = assignment.assigned_date.replace(tzinfo=pytz.UTC).astimezone(branch_timezone)
+                else:
+                    assigned_date = assignment.assigned_date.astimezone(branch_timezone)
+            
+            if assignment.return_date:
+                if assignment.return_date.tzinfo is None:
+                    # If no timezone info, assume it's in UTC and convert
+                    return_date = assignment.return_date.replace(tzinfo=pytz.UTC).astimezone(branch_timezone)
+                else:
+                    return_date = assignment.return_date.astimezone(branch_timezone)
             
             result.append({
                 'assignment_id': assignment.id,
