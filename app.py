@@ -157,7 +157,7 @@ def load_user(user_id):
 
 @app.context_processor
 def inject_current_year():
-    return {'current_year': datetime.now().year}
+    return {'current_year': datetime.now(get_branch_timezone(session.get('branch', 'vietnam'))).year}
 
 # Định nghĩa hàm translate_db_value trước khi dùng ở index
 def translate_db_value(value, field_type):
@@ -1979,6 +1979,14 @@ def update_asset(id):
         # Adjust available quantity proportionally
         asset.available_quantity += quantity_difference
         
+        # Khi cập nhật available_quantity (update_asset)
+        # Đảm bảo không âm và không vượt quá quantity
+        asset.available_quantity += quantity_difference
+        if asset.available_quantity < 0:
+            asset.available_quantity = 0
+        if asset.available_quantity > asset.quantity:
+            asset.available_quantity = asset.quantity
+        
         db.session.commit()
         
         return jsonify({
@@ -2276,7 +2284,7 @@ def assignment_history():
     return render_template('assignment_history.html')
 
 def get_start_date_from_filter(filter):
-    now = datetime.now()
+    now = datetime.now(get_branch_timezone(session.get('branch', 'vietnam')))
     if filter == 'week':
         # Start of the current week (Monday)
         start_date = now - timedelta(days=now.weekday())
