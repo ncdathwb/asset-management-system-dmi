@@ -279,26 +279,32 @@ def index():
     # Get recent activities (filtered by date)
     recent_activities = []
     # 1. AssetAssignment: cấp phát (assigned), thu hồi (returned)
-    assignment_logs = assignment_query.join(Asset).join(Employee).filter(Asset.branch == branch).order_by(AssetAssignment.assigned_date.desc()).limit(10).all()
-    for a in assignment_logs:
-        if a.status == 'assigned':
+    assignment_logs = db.session.query(AssetAssignment, Asset, Employee).\
+        join(Asset, AssetAssignment.asset_id == Asset.id).\
+        join(Employee, AssetAssignment.employee_id == Employee.id).\
+        filter(Asset.branch == branch).\
+        order_by(db.case(
+            (AssetAssignment.return_date.isnot(None), AssetAssignment.return_date),
+            else_=AssetAssignment.assigned_date
+        ).desc()).limit(10).all()
+    for assignment, asset, employee in assignment_logs:
+        if assignment.status == 'assigned':
             recent_activities.append({
                 'type': 'assigned',
-                'employee': a.employee,
-                'asset': a.asset,
-                'date': a.assigned_date,
-                'note': a.notes or ''
+                'employee': employee,
+                'asset': asset,
+                'date': assignment.assigned_date,
+                'note': assignment.notes or ''
             })
-        elif a.status == 'returned':
-            # Dịch note nếu là trạng thái
-            note = a.reclaim_reason or ''
+        elif assignment.status == 'returned':
+            note = assignment.reclaim_reason or ''
             note_translated = translate_db_value(note, 'status') if note else ''
             recent_activities.append({
                 'type': 'returned',
-                'employee': a.employee,
-                'asset': a.asset,
-                'date': a.return_date,
-                'note': note_translated
+                'employee': employee,
+                'asset': asset,
+                'date': assignment.return_date,
+                'note': note_translated or assignment.reclaim_notes or ''
             })
     # 2. AssetRequest: chấp nhận/từ chối yêu cầu cấp phát
     asset_requests = AssetRequest.query.join(Employee).filter(Employee.branch == branch).order_by(AssetRequest.approval_date.desc()).limit(10).all()
