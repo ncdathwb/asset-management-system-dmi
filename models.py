@@ -161,12 +161,13 @@ class Asset(db.Model):
 
     def to_dict(self):
         from flask import session
-        from app import translate_db_value
+        from app import translate_db_value, translate
         return {
             'id': self.id,
             'asset_code': self.asset_code,
             'name': self.name,
             'type': self.type,
+            'type_jp': translate(self.type, 'asset_type', session.get('language', 'ja')),
             'quantity': self.quantity,
             'available_quantity': self.available_quantity,
             'status': self.status,

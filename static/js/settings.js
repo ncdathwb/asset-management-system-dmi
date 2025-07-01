@@ -124,7 +124,7 @@ function loadDepartments(page = 1) {
                 const branchJP = dept.branch === 'vietnam' ? 'ベトナム' : (dept.branch === 'japan' ? '日本' : dept.branch);
                 const row = `
                     <tr>
-                        <td>${dept.name}</td>
+                        <td>${dept.name_jp || dept.name}</td>
                         <td>${branchJP}</td>
                         <td>
                             ${isBranchAdmin ? `
@@ -301,7 +301,7 @@ function loadAssetTypes(page = 1) {
                 const safeTypeName = type.name.replace(/'/g, "\\'");
                 const row = `
                     <tr>
-                        <td>${type.name}</td>
+                        <td>${type.name_jp || type.name}</td>
                         <td>${branchJP}</td>
                         <td>
                             ${isBranchAdmin ? `

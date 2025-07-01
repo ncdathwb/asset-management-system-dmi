@@ -621,8 +621,8 @@ def assets():
         assets = pagination.items
         assets_json = []
         for asset in assets:
-            asset.type_jp = translate(asset.type, 'asset_type', 'ja')
-            asset.name_jp = translate(asset.name, 'asset_name', 'ja')
+            asset.type_jp = translate(asset.type, 'asset_type', session.get('language', 'ja'))
+            asset.name_jp = translate(asset.name, 'asset_name', session.get('language', 'ja'))
             d = asset.to_dict()
             d['type_jp'] = asset.type_jp
             d['name_jp'] = asset.name_jp
@@ -817,12 +817,12 @@ def get_employee(id):
                 'asset_code': asset.asset_code,
                 'name': asset.name,
                 'type': asset.type,
-                'type_jp': translate(asset.type, 'asset_type', 'ja'),
+                'type_jp': translate(asset.type, 'asset_type', session.get('language', 'ja')),
                 'reclaim_reason': assign.reclaim_reason
             }
             for asset, assign in all_assignments if assign.status == 'assigned'
         ]
-        department_jp = translate(employee.department, 'department', 'ja') if employee.department else ''
+        department_jp = translate(employee.department, 'department', session.get('language', 'ja')) if employee.department else ''
         return jsonify({
             'success': True,
             'employee': {
@@ -988,7 +988,12 @@ def get_departments():
         departments = pagination.items
         return jsonify({
             'success': True,
-            'departments': [{'id': dept.id, 'name': dept.name, 'branch': dept.branch} for dept in departments],
+            'departments': [{
+                'id': dept.id, 
+                'name': dept.name, 
+                'name_jp': translate(dept.name, 'department', session.get('language', 'ja')),
+                'branch': dept.branch
+            } for dept in departments],
             'total': pagination.total,
             'pages': pagination.pages,
             'page': page,
@@ -1407,6 +1412,7 @@ def get_my_assets():
                 'asset_code': asset.asset_code,
                 'name': asset.name,
                 'type': asset.type,
+                'type_jp': translate(asset.type, 'asset_type', session.get('language', 'ja')),
                 'status': asset.status,
                 'assigned_date': formatted_date,
                 'has_pending_return': has_pending_return
@@ -1828,7 +1834,12 @@ def get_asset_types():
         return jsonify({
             'success': True,
             'asset_types': [
-                {'id': t.id, 'name': t.name, 'branch': t.branch} for t in asset_types
+                {
+                    'id': t.id, 
+                    'name': t.name, 
+                    'name_jp': translate(t.name, 'asset_type', session.get('language', 'ja')),
+                    'branch': t.branch
+                } for t in asset_types
             ],
             'total': pagination.total,
             'pages': pagination.pages,
@@ -1944,6 +1955,7 @@ def get_asset_detail(id):
             'asset_code': asset.asset_code,
             'name': asset.name,
             'type': asset.type,
+            'type_jp': translate(asset.type, 'asset_type', session.get('language', 'ja')),
             'quantity': asset.quantity,
             'available_quantity': asset.available_quantity,
             'branch': asset.branch,
@@ -2292,6 +2304,7 @@ def get_assignment_history():
                 'asset_name': asset.name,
                 'asset_code': asset.asset_code,
                 'asset_type': asset.type,
+                'asset_type_jp': translate(asset.type, 'asset_type', session.get('language', 'ja')),
                 'status': status,
                 'reason': reason,
                 'notes': notes
@@ -2466,7 +2479,8 @@ def get_employee_assets(id):
                     'assignment_id': assign.id,
                     'asset_code': asset.asset_code,
                     'name': asset.name,
-                    'type': asset.type
+                    'type': asset.type,
+                    'type_jp': translate(asset.type, 'asset_type', session.get('language', 'ja'))
                 })
         return jsonify({
             'success': True,
@@ -2475,6 +2489,7 @@ def get_employee_assets(id):
                 'employee_code': employee.employee_code,
                 'name': employee.name,
                 'department': employee.department,
+                'department_jp': translate(employee.department, 'department', session.get('language', 'ja')) if employee.department else '',
                 'email': employee.email,
                 'status': employee.status
             },
@@ -2666,10 +2681,12 @@ def asset_detail(id):
                     'employee_code': employee.employee_code,
                     'name': employee.name,
                     'department': employee.department,
+                    'department_jp': translate(employee.department, 'department', session.get('language', 'ja')) if employee.department else '',
                     'assignment_id': assignment.id
                 })
         
-        return render_template('asset_detail.html', asset=asset, employees=employees)
+        asset_type_jp = translate(asset.type, 'asset_type', session.get('language', 'ja'))
+        return render_template('asset_detail.html', asset=asset, asset_type_jp=asset_type_jp, employees=employees)
         
     except Exception as e:
         flash(str(e), 'error')
@@ -3040,10 +3057,12 @@ def get_asset_assignment_logs():
                 'asset_code': asset.asset_code,
                 'asset_name': asset.name,
                 'asset_type': asset.type,
+                'asset_type_jp': translate(asset.type, 'asset_type', session.get('language', 'ja')),
                 'employee_id': log.employee_id,
                 'employee_code': employee.employee_code,
                 'employee_name': employee.name,
                 'employee_department': employee.department,
+                'employee_department_jp': translate(employee.department, 'department', session.get('language', 'ja')) if employee.department else '',
                 'action': log.action,
                 'date': formatted_date,
                 'notes': log.notes,

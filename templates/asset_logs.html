@@ -130,8 +130,8 @@ function loadAssetLogs(page = 1, per_page) {
                     var row = $('<tr>');
                     row.append($('<td>').text(log.date || ''));
                     row.append($('<td>').text(translateAction(log.action)));
-                    row.append($('<td>').text(log.employee_name + ' (' + log.employee_code + ') - ' + log.employee_department));
-                    row.append($('<td>').text(log.asset_name + ' (' + log.asset_code + ') - ' + log.asset_type));
+                    row.append($('<td>').text(log.employee_name + ' (' + log.employee_code + ') - ' + log.employee_department_jp));
+                    row.append($('<td>').text(log.asset_name + ' (' + log.asset_code + ') - ' + log.asset_type_jp));
                     row.append($('<td>').text(log.reason || ''));
                     row.append($('<td>').text(log.notes || ''));
                     

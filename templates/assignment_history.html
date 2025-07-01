@@ -170,7 +170,7 @@ function loadAssignmentHistory(page = 1, per_page) {
                     row.append($('<td>').text(item.date_time || item.date));
                     row.append($('<td>').text(item.employee_department || ''));
                     row.append($('<td>').text(item.employee_name + ' (' + item.employee_code + ')'));
-                    row.append($('<td>').text(item.asset_name + ' (' + item.asset_code + ')'));
+                    row.append($('<td>').text(item.asset_name + ' (' + item.asset_code + ') - ' + item.asset_type_jp));
                     row.append($('<td>').text(translateStatus(item.status)));
                     row.append($('<td>').text(item.status === 'assigned' ? '使用' : translateReason(item.reason)));
                     row.append($('<td>').text(item.notes || ''));

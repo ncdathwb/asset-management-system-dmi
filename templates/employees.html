@@ -717,7 +717,7 @@ function viewEmployeeDetail(employeeId) {
                                 </td>
                                 <td>${asset.asset_code}</td>
                                 <td>${asset.name}</td>
-                                <td>${asset.type}</td>
+                                <td>${asset.type_jp}</td>
                                 <td>
                                     <button class="btn btn-danger btn-sm reclaim-individual-asset-btn" 
                                             data-assignment-id="${asset.assignment_id}">
@@ -788,7 +788,22 @@ function validateReclaimFormEmployee() {
 }
 
 function exportToCSV() {
-    window.location.href = '/api/employees/export-csv';
+    var exportBtn = $("button.btn-secondary:contains('CSVにエクスポート')");
+    var originalText = exportBtn.html();
+    exportBtn.html('<i class="fas fa-spinner fa-spin"></i> エクスポート中...');
+    exportBtn.prop('disabled', true);
+
+    // Tạo invisible iframe để tải file mà không reload trang
+    var iframe = $('<iframe style="display:none"></iframe>');
+    iframe.attr('src', '/api/employees/export-csv');
+    $('body').append(iframe);
+
+    // Sau 3 giây, khôi phục lại nút
+    setTimeout(function() {
+        exportBtn.html(originalText);
+        exportBtn.prop('disabled', false);
+        iframe.remove();
+    }, 3000);
 }
 
 // Toast notification function (toast style, like asset page)
