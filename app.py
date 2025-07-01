@@ -742,10 +742,22 @@ def deactivate_employee(id):
         ).all()
         
         # Return all assets to inventory
+        current_time = datetime.now(get_branch_timezone(employee.branch))
         for assignment in assigned_assets:
-            assignment.status = 'returned'
-            assignment.return_date = datetime.now(get_branch_timezone(employee.branch)).date()
-            assignment.reclaim_reason = '従業員の無効化'
+            # Tạo bản ghi mới cho lịch sử thu hồi
+            return_assignment = AssetAssignment(
+                asset_id=assignment.asset_id,
+                employee_id=assignment.employee_id,
+                assigned_date=assignment.assigned_date,
+                return_date=current_time,
+                status='returned',
+                notes=assignment.notes,
+                reclaim_reason='従業員の無効化',
+                reclaim_notes='',
+                created_at=assignment.created_at,
+                updated_at=current_time
+            )
+            db.session.add(return_assignment)
             
             # Update asset available quantity
             asset = Asset.query.get(assignment.asset_id)
@@ -1138,7 +1150,7 @@ def approve_asset_request(id):
         
         # Get branch timezone
         branch_timezone = get_branch_timezone(employee.branch)
-        approval_date = datetime.now(branch_timezone).date()
+        approval_date = datetime.now(branch_timezone)
         # Log timezone information
         app.logger.info(f"Approving asset request with timezone {branch_timezone} for branch {employee.branch}")
         app.logger.info(f"Approval date: {approval_date.isoformat()}")
@@ -1146,14 +1158,17 @@ def approve_asset_request(id):
         # Update request status
         asset_request.status = 'approved'
         asset_request.approved_by = current_user.id
-        asset_request.approval_date = approval_date
+        asset_request.approval_date = approval_date.date()
         
         # Create asset assignment record
         assignment = AssetAssignment(
             asset_id=asset_request.asset_id,
             employee_id=asset_request.employee_id,
             notes=asset_request.notes,
-            assigned_date=approval_date
+            assigned_date=approval_date,
+            status='assigned',
+            created_at=approval_date,
+            updated_at=approval_date
         )
         
         # Update available asset quantity
@@ -1579,21 +1594,22 @@ def approve_return_request(id):
         asset = Asset.query.get(asset_assignment.asset_id)
         if asset.branch != session.get('branch'):
             return jsonify({'success': False, 'message': 'You do not have permission for assets in other branches'})
+        current_time = datetime.now(get_branch_timezone(asset.branch))
         return_request.status = 'approved'
         return_request.approved_by = current_user.id
-        return_request.approval_date = datetime.now(get_branch_timezone(asset.branch)).date()
+        return_request.approval_date = current_time.date()
         # Tạo bản ghi mới cho lịch sử thu hồi (KHÔNG update assignment.status)
         return_assignment = AssetAssignment(
             asset_id=asset_assignment.asset_id,
             employee_id=asset_assignment.employee_id,
             assigned_date=asset_assignment.assigned_date,
-            return_date=datetime.now(get_branch_timezone(asset.branch)).date(),
+            return_date=current_time,
             status='returned',
             notes=asset_assignment.notes,
             reclaim_reason=getattr(return_request, 'reclaim_reason', None) or '',
             reclaim_notes=return_request.notes or '',
             created_at=asset_assignment.created_at,
-            updated_at=datetime.now(get_branch_timezone(asset.branch)).date()
+            updated_at=current_time
         )
         db.session.add(return_assignment)
         asset.available_quantity += 1
@@ -2019,17 +2035,18 @@ def reclaim_asset_assignment(assignment_id):
         notes = request.form.get('notes') or request.json.get('notes')
         reclaim_notes = notes if notes is not None else ''
         # Tạo bản ghi mới cho lịch sử thu hồi (KHÔNG update assignment.status)
+        current_time = datetime.now(get_branch_timezone(asset.branch))
         return_assignment = AssetAssignment(
             asset_id=assignment.asset_id,
             employee_id=assignment.employee_id,
             assigned_date=assignment.assigned_date,
-            return_date=datetime.now(get_branch_timezone(asset.branch)).date(),
+            return_date=current_time,
             status='returned',
             notes=assignment.notes,
             reclaim_reason=reason,
             reclaim_notes=reclaim_notes,
             created_at=assignment.created_at,
-            updated_at=datetime.now(get_branch_timezone(asset.branch)).date()
+            updated_at=current_time
         )
         db.session.add(return_assignment)
         # Cập nhật số lượng tài sản về kho
@@ -2075,14 +2092,15 @@ def admin_assign_asset():
         if asset.available_quantity <= 0:
             return jsonify({'success': False, 'message': 'Tài sản này hiện không còn sẵn sàng'}), 400
         # Tạo bản ghi cấp phát
+        current_time = datetime.now(get_branch_timezone(asset.branch))
         assignment = AssetAssignment(
             asset_id=asset.id,
             employee_id=employee.id,
-            assigned_date=datetime.now(get_branch_timezone(asset.branch)).date(),
+            assigned_date=current_time,
             status='assigned',
             notes=notes if notes is not None else '',
-            created_at=datetime.now(get_branch_timezone(asset.branch)).date(),
-            updated_at=datetime.now(get_branch_timezone(asset.branch)).date()
+            created_at=current_time,
+            updated_at=current_time
         )
         # Ghi nhận người cấp phát (nếu muốn, có thể thêm trường assigned_by vào model)
         # assignment.assigned_by = current_user.id
@@ -2146,7 +2164,7 @@ def get_assignment_history():
         page = request.args.get(get_page_parameter(), type=int, default=1)
         per_page = 5
 
-        # Bắt đầu query
+        # Bắt đầu query - lấy tất cả bản ghi assignment (cả assigned và returned)
         assignment_history_query = db.session.query(
             AssetAssignment, Asset, Employee
         ).join(
@@ -2252,6 +2270,10 @@ def get_assignment_history():
                 else:
                     return_date = assignment.return_date.astimezone(branch_timezone)
             
+            # Xác định loại sự kiện và ngày hiển thị
+            event_date = return_date if assignment.status == 'returned' else assigned_date
+            event_type = 'returned' if assignment.status == 'returned' else 'assigned'
+            
             result.append({
                 'assignment_id': assignment.id,
                 'asset_code': asset.asset_code,
@@ -2262,6 +2284,8 @@ def get_assignment_history():
                 'employee_department': employee.department,
                 'assigned_date': assigned_date.strftime('%d-%m-%Y %H:%M') if assigned_date else None,
                 'return_date': return_date.strftime('%d-%m-%Y %H:%M') if return_date else None,
+                'event_date': event_date.strftime('%d-%m-%Y %H:%M') if event_date else None,
+                'event_type': event_type,
                 'reclaim_reason': assignment.reclaim_reason,
                 'status': assignment.status,
                 'notes': assignment.notes,
@@ -2492,11 +2516,21 @@ def bulk_reclaim_assets():
                 continue
             if asset.branch != session.get('branch') or employee.branch != session.get('branch'):
                 continue
-            # Cập nhật trạng thái assignment
-            assignment.status = 'returned'
-            assignment.return_date = datetime.now(get_branch_timezone(asset.branch)).date()
-            assignment.reclaim_reason = reason
-            assignment.reclaim_notes = notes if notes is not None else ''
+            # Tạo bản ghi mới cho lịch sử thu hồi (KHÔNG update assignment.status)
+            current_time = datetime.now(get_branch_timezone(asset.branch))
+            return_assignment = AssetAssignment(
+                asset_id=assignment.asset_id,
+                employee_id=assignment.employee_id,
+                assigned_date=assignment.assigned_date,
+                return_date=current_time,
+                status='returned',
+                notes=assignment.notes,
+                reclaim_reason=reason,
+                reclaim_notes=notes if notes is not None else '',
+                created_at=assignment.created_at,
+                updated_at=current_time
+            )
+            db.session.add(return_assignment)
             # Cập nhật số lượng tài sản
             asset.available_quantity += 1
             # Cập nhật trạng thái asset dựa trên lý do

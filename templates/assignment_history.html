@@ -230,15 +230,15 @@ function loadAssignmentHistory(page = 1, per_page) {
                 response.history.forEach(function(item) {
                     console.log('DEBUG item:', item);
                     var row = $('<tr>');
-                    var date = item.assigned_date || item.return_date;
+                    var date = item.event_date || item.assigned_date || item.return_date;
                     row.append($('<td>').text(formatDate(date)));
                     row.append($('<td>').text(item.employee_name + ' (' + item.employee_code + ')'));
                     row.append($('<td>').text(item.asset_name + ' (' + item.asset_code + ')'));
-                    var status = item.status === 'assigned' ? '割当済み' : '返却済み';
+                    var status = item.event_type === 'assigned' ? '割当済み' : '返却済み';
                     row.append($('<td>').text(status));
                     var reason = '';
                     var memo = '';
-                    if (item.status === 'assigned') {
+                    if (item.event_type === 'assigned') {
                         reason = '使用';
                         memo = item.notes || '';
                     } else {
@@ -247,7 +247,7 @@ function loadAssignmentHistory(page = 1, per_page) {
                     }
                     row.append($('<td>').text(reason));
                     row.append($('<td>').text(memo));
-                    row.addClass(item.status === 'assigned' ? 'table-primary' : 'table-success');
+                    row.addClass(item.event_type === 'assigned' ? 'table-primary' : 'table-success');
                     
                     tableBody.append(row);
                 });
