@@ -31,7 +31,7 @@
                         </tr>
                         <tr>
                             <th>{{ _('Type') }}</th>
-                            <td>{{ asset_type_jp }}</td>
+                            <td>{{ asset.type }}</td>
                         </tr>
                         <tr>
                             <th>{{ _('Total Quantity') }}</th>
@@ -88,7 +88,7 @@
                                     <tr>
                                         <td>{{ employee.employee_code }}</td>
                                         <td>{{ employee.name }}</td>
-                                        <td>{{ employee.department_jp or employee.department }}</td>
+                                        <td>{{ employee.department }}</td>
                                         <td>
                                             <button class="btn btn-sm btn-warning" onclick="reclaimAsset({{ employee.assignment_id }})">
                                                 {{ _('Reclaim') }}

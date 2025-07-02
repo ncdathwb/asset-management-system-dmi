@@ -8,7 +8,6 @@ import os
 import sys
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from pytz import timezone
 load_dotenv()
 
 # Thêm thư mục hiện tại vào Python path
@@ -51,11 +50,11 @@ def create_sample_assignments():
             assigned_assignment = AssetAssignment(
                 asset_id=asset.id,
                 employee_id=employee.id,
-                assigned_date=datetime.now(timezone('Asia/Ho_Chi_Minh')) - timedelta(days=i+1),
+                assigned_date=datetime.now() - timedelta(days=i+1),
                 status='assigned',
                 notes=f'Cấp phát mẫu #{i+1}',
-                created_at=datetime.now(timezone('Asia/Ho_Chi_Minh')) - timedelta(days=i+1),
-                updated_at=datetime.now(timezone('Asia/Ho_Chi_Minh')) - timedelta(days=i+1)
+                created_at=datetime.now() - timedelta(days=i+1),
+                updated_at=datetime.now() - timedelta(days=i+1)
             )
             sample_assignments.append(assigned_assignment)
             
@@ -73,14 +72,14 @@ def create_sample_assignments():
                 returned_assignment = AssetAssignment(
                     asset_id=asset.id,
                     employee_id=employee.id,
-                    assigned_date=datetime.now(timezone('Asia/Ho_Chi_Minh')) - timedelta(days=i+5),
-                    return_date=datetime.now(timezone('Asia/Ho_Chi_Minh')) - timedelta(days=i+1),
+                    assigned_date=datetime.now() - timedelta(days=i+5),
+                    return_date=datetime.now() - timedelta(days=i+1),
                     status='returned',
                     notes=f'Cấp phát mẫu #{i+4}',
                     reclaim_reason='Not in use / Idle',
                     reclaim_notes=f'Trả lại mẫu #{i+1}',
-                    created_at=datetime.now(timezone('Asia/Ho_Chi_Minh')) - timedelta(days=i+5),
-                    updated_at=datetime.now(timezone('Asia/Ho_Chi_Minh')) - timedelta(days=i+1)
+                    created_at=datetime.now() - timedelta(days=i+5),
+                    updated_at=datetime.now() - timedelta(days=i+1)
                 )
                 sample_assignments.append(returned_assignment)
                 

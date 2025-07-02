@@ -22,6 +22,7 @@ import time
 from sqlalchemy.exc import OperationalError, DisconnectionError
 from functools import wraps
 import json
+import re
 
 def retry_on_db_error(max_retries=3, delay=1):
     """Decorator để retry khi gặp lỗi kết nối database"""
@@ -55,22 +56,23 @@ def get_db_connection():
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 # Sử dụng PostgreSQL thay vì SQLite
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///asset_management.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://asset_management_system_dmi_database_user:KATbnx7sI9a7Liv6YypmKguAMquqfdfB@dpg-d1eg11ili9vc73a13abg-a.singapore-postgres.render.com/asset_management_system_dmi_database')
 if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
     app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
 
-# Thêm cấu hình để xử lý vấn đề kết nối PostgreSQL
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,  # Kiểm tra kết nối trước khi sử dụng
-    'pool_recycle': 300,    # Tái tạo kết nối sau 5 phút
-    'pool_timeout': 20,     # Timeout cho pool
-    'max_overflow': 0,      # Không cho phép overflow
-    'pool_size': 10,        # Kích thước pool
-    'connect_args': {
-        'connect_timeout': 10,  # Timeout kết nối 10 giây
-        'application_name': 'asset_management_app'
+# Thêm cấu hình để xử lý vấn đề kết nối PostgreSQL (chỉ áp dụng cho PostgreSQL)
+if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']:
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,  # Kiểm tra kết nối trước khi sử dụng
+        'pool_recycle': 300,    # Tái tạo kết nối sau 5 phút
+        'pool_timeout': 20,     # Timeout cho pool
+        'max_overflow': 0,      # Không cho phép overflow
+        'pool_size': 10,        # Kích thước pool
+        'connect_args': {
+            'connect_timeout': 10,  # Timeout kết nối 10 giây
+            'application_name': 'asset_management_app'
+        }
     }
-}
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['WTF_CSRF_ENABLED'] = True
@@ -157,7 +159,7 @@ def load_user(user_id):
 
 @app.context_processor
 def inject_current_year():
-    return {'current_year': datetime.now(get_branch_timezone(session.get('branch', 'vietnam'))).year}
+    return {'current_year': datetime.now().year}
 
 # Định nghĩa hàm translate_db_value trước khi dùng ở index
 def translate_db_value(value, field_type):
@@ -209,9 +211,7 @@ def index():
     if current_user.is_employee():
         return redirect(url_for('employee_asset_request'))
     filter = request.args.get('filter', 'today')
-    branch = session.get('branch')
-    branch_timezone = get_branch_timezone(branch)
-    now = datetime.now(branch_timezone)
+    now = datetime.now()
     if filter == 'today':
         start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
     elif filter == 'last7':
@@ -621,8 +621,8 @@ def assets():
         assets = pagination.items
         assets_json = []
         for asset in assets:
-            asset.type_jp = translate(asset.type, 'asset_type', session.get('language', 'ja'))
-            asset.name_jp = translate(asset.name, 'asset_name', session.get('language', 'ja'))
+            asset.type_jp = translate(asset.type, 'asset_type', 'ja')
+            asset.name_jp = translate(asset.name, 'asset_name', 'ja')
             d = asset.to_dict()
             d['type_jp'] = asset.type_jp
             d['name_jp'] = asset.name_jp
@@ -817,12 +817,11 @@ def get_employee(id):
                 'asset_code': asset.asset_code,
                 'name': asset.name,
                 'type': asset.type,
-                'type_jp': translate(asset.type, 'asset_type', session.get('language', 'ja')),
+                'type_jp': translate(asset.type, 'asset_type', 'ja'),
                 'reclaim_reason': assign.reclaim_reason
             }
             for asset, assign in all_assignments if assign.status == 'assigned'
         ]
-        department_jp = translate(employee.department, 'department', session.get('language', 'ja')) if employee.department else ''
         return jsonify({
             'success': True,
             'employee': {
@@ -830,11 +829,10 @@ def get_employee(id):
                 'employee_code': employee.employee_code,
                 'name': employee.name,
                 'department': employee.department,
-                'department_jp': department_jp,
                 'branch': employee.branch,
                 'email': employee.email,
                 'status': employee.status,
-                'created_at': employee.created_at.strftime('%d-%m-%Y %H:%M') if hasattr(employee, 'created_at') and employee.created_at else None
+                'created_at': employee.created_at.strftime('%d-%m-%Y %H:%M') if hasattr(employee, 'created_at') else None
             },
             'assigned_assets': assigned_assets,
         })
@@ -938,6 +936,10 @@ def delete_asset(id):
     assigned = AssetAssignment.query.filter_by(asset_id=asset.id, status='assigned').first()
     if assigned:
         return jsonify({'success': False, 'message': translate('Cannot delete assets that are currently assigned. Please reclaim all assets first.', 'messages', 'ja')})
+    # Xóa tất cả AssetReturnRequest liên quan đến các AssetAssignment của asset này
+    assignments = AssetAssignment.query.filter_by(asset_id=asset.id).all()
+    for assignment in assignments:
+        AssetReturnRequest.query.filter_by(asset_assignment_id=assignment.id).delete()
     # Xoá toàn bộ lịch sử cấp phát liên quan
     AssetAssignment.query.filter_by(asset_id=asset.id).delete()
     db.session.delete(asset)
@@ -988,12 +990,7 @@ def get_departments():
         departments = pagination.items
         return jsonify({
             'success': True,
-            'departments': [{
-                'id': dept.id, 
-                'name': dept.name, 
-                'name_jp': translate(dept.name, 'department', session.get('language', 'ja')),
-                'branch': dept.branch
-            } for dept in departments],
+            'departments': [{'id': dept.id, 'name': dept.name, 'branch': dept.branch} for dept in departments],
             'total': pagination.total,
             'pages': pagination.pages,
             'page': page,
@@ -1024,8 +1021,7 @@ def export_employees_csv():
                 status
             ])
         import datetime
-        branch_timezone = get_branch_timezone(session.get('branch', 'vietnam'))
-        timestamp = datetime.datetime.now(branch_timezone).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"employees_{session.get('branch')}_{timestamp}.csv"
         response = Response(
             output.getvalue(),
@@ -1058,8 +1054,7 @@ def export_assets_csv():
                 asset.available_quantity
             ])
         import datetime
-        branch_timezone = get_branch_timezone(session.get('branch', 'vietnam'))
-        timestamp = datetime.datetime.now(branch_timezone).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"assets_{session.get('branch')}_{timestamp}.csv"
         response = Response(
             output.getvalue(),
@@ -1388,33 +1383,14 @@ def get_my_assets():
                 status='pending'
             ).first() is not None
             
-            # Get branch timezone for proper date formatting
-            branch_timezone = get_branch_timezone(asset.branch)
-            
-            # Convert to branch timezone if assigned_date has timezone info, otherwise assume it's in UTC
-            if assignment.assigned_date:
-                if assignment.assigned_date.tzinfo is None:
-                    # If no timezone info, assume UTC and convert to branch timezone
-                    from datetime import timezone
-                    utc_date = assignment.assigned_date.replace(tzinfo=timezone.utc)
-                    local_date = utc_date.astimezone(branch_timezone)
-                else:
-                    # If has timezone info, convert to branch timezone
-                    local_date = assignment.assigned_date.astimezone(branch_timezone)
-                
-                formatted_date = local_date.strftime('%d-%m-%Y %H:%M')
-            else:
-                formatted_date = ''
-            
             result.append({
                 'assignment_id': assignment.id,
                 'asset_id': asset.id,
                 'asset_code': asset.asset_code,
                 'name': asset.name,
                 'type': asset.type,
-                'type_jp': translate(asset.type, 'asset_type', session.get('language', 'ja')),
                 'status': asset.status,
-                'assigned_date': formatted_date,
+                'assigned_date': assignment.assigned_date.strftime('%d-%m-%Y %H:%M'),
                 'has_pending_return': has_pending_return
             })
         
@@ -1834,12 +1810,7 @@ def get_asset_types():
         return jsonify({
             'success': True,
             'asset_types': [
-                {
-                    'id': t.id, 
-                    'name': t.name, 
-                    'name_jp': translate(t.name, 'asset_type', session.get('language', 'ja')),
-                    'branch': t.branch
-                } for t in asset_types
+                {'id': t.id, 'name': t.name, 'branch': t.branch} for t in asset_types
             ],
             'total': pagination.total,
             'pages': pagination.pages,
@@ -1955,7 +1926,6 @@ def get_asset_detail(id):
             'asset_code': asset.asset_code,
             'name': asset.name,
             'type': asset.type,
-            'type_jp': translate(asset.type, 'asset_type', session.get('language', 'ja')),
             'quantity': asset.quantity,
             'available_quantity': asset.available_quantity,
             'branch': asset.branch,
@@ -2015,14 +1985,6 @@ def update_asset(id):
         # Adjust available quantity proportionally
         asset.available_quantity += quantity_difference
         
-        # Khi cập nhật available_quantity (update_asset)
-        # Đảm bảo không âm và không vượt quá quantity
-        asset.available_quantity += quantity_difference
-        if asset.available_quantity < 0:
-            asset.available_quantity = 0
-        if asset.available_quantity > asset.quantity:
-            asset.available_quantity = asset.quantity
-        
         db.session.commit()
         
         return jsonify({
@@ -2058,8 +2020,7 @@ def restore_db():
         return redirect(url_for('settings'))
     # Backup file cũ trước khi ghi đè
     db_path = os.path.join(os.getcwd(), 'asset_management.db')
-    branch_timezone = get_branch_timezone(session.get('branch', 'vietnam'))
-    backup_path = os.path.join(os.getcwd(), f'asset_management_backup_{datetime.now(branch_timezone).strftime("%Y%m%d_%H%M%S")}.db')
+    backup_path = os.path.join(os.getcwd(), f'asset_management_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.db')
     if os.path.exists(db_path):
         os.rename(db_path, backup_path)
     file.save(db_path)
@@ -2272,29 +2233,25 @@ def get_assignment_history():
 
         result = []
         for log, asset, employee in logs:
-            # Get branch timezone for proper date formatting
-            branch_timezone = get_branch_timezone(asset.branch)
-            
-            # Convert to branch timezone if log.date has timezone info, otherwise assume it's in UTC
-            if log.date:
-                if log.date.tzinfo is None:
-                    # If no timezone info, assume UTC and convert to branch timezone
-                    from datetime import timezone
-                    utc_date = log.date.replace(tzinfo=timezone.utc)
-                    local_date = utc_date.astimezone(branch_timezone)
-                else:
-                    # If has timezone info, convert to branch timezone
-                    local_date = log.date.astimezone(branch_timezone)
-                
-                date_time = local_date.strftime('%d-%m-%Y %H:%M')
-                event_date = local_date.strftime('%d-%m-%Y')
-            else:
-                date_time = ''
-                event_date = ''
-            
+            # Format ngày+giờ
+            date_time = log.date.strftime('%d-%m-%Y %H:%M') if log.date else ''
+            event_date = log.date.strftime('%d-%m-%Y') if log.date else ''
             status = 'assigned' if log.action == 'assigned' else 'returned'
             reason = log.reason or ''
             notes = log.notes or ''
+            # Nếu notes có dạng '返却理由: ... - メモ: ...' thì tách ra
+            if notes.startswith('返却理由:'):
+                import re
+                m = re.match(r'返却理由: ?(.*?) ?- ?メモ: ?(.*)', notes)
+                if m:
+                    reason = m.group(1)
+                    notes = m.group(2)
+                else:
+                    # Nếu chỉ có lý do mà không có memo
+                    m2 = re.match(r'返却理由: ?(.*)', notes)
+                    if m2:
+                        reason = m2.group(1)
+                        notes = ''
             result.append({
                 'date_time': date_time,
                 'date': event_date,
@@ -2304,7 +2261,6 @@ def get_assignment_history():
                 'asset_name': asset.name,
                 'asset_code': asset.asset_code,
                 'asset_type': asset.type,
-                'asset_type_jp': translate(asset.type, 'asset_type', session.get('language', 'ja')),
                 'status': status,
                 'reason': reason,
                 'notes': notes
@@ -2339,7 +2295,7 @@ def assignment_history():
     return render_template('assignment_history.html')
 
 def get_start_date_from_filter(filter):
-    now = datetime.now(get_branch_timezone(session.get('branch', 'vietnam')))
+    now = datetime.now()
     if filter == 'week':
         # Start of the current week (Monday)
         start_date = now - timedelta(days=now.weekday())
@@ -2394,8 +2350,7 @@ def api_asset_flow():
     branch = session.get('branch')
     filter = request.args.get('filter', 'week') # Default filter to week
     start_date = get_start_date_from_filter(filter)
-    branch_timezone = get_branch_timezone(branch)
-    now = datetime.now(branch_timezone)
+    now = datetime.now()
 
     date_periods = [] # Use a more general name for the list of date objects
     labels = []       # List for the labels displayed on the chart (strings)
@@ -2479,8 +2434,7 @@ def get_employee_assets(id):
                     'assignment_id': assign.id,
                     'asset_code': asset.asset_code,
                     'name': asset.name,
-                    'type': asset.type,
-                    'type_jp': translate(asset.type, 'asset_type', session.get('language', 'ja'))
+                    'type': asset.type
                 })
         return jsonify({
             'success': True,
@@ -2489,7 +2443,6 @@ def get_employee_assets(id):
                 'employee_code': employee.employee_code,
                 'name': employee.name,
                 'department': employee.department,
-                'department_jp': translate(employee.department, 'department', session.get('language', 'ja')) if employee.department else '',
                 'email': employee.email,
                 'status': employee.status
             },
@@ -2635,19 +2588,19 @@ def health_check():
             return jsonify({
                 'status': 'healthy',
                 'database': 'connected',
-                'timestamp': datetime.now(pytz.utc).isoformat()
+                'timestamp': datetime.now().isoformat()
             }), 200
         else:
             return jsonify({
                 'status': 'unhealthy',
                 'database': 'disconnected',
-                'timestamp': datetime.now(pytz.utc).isoformat()
+                'timestamp': datetime.now().isoformat()
             }), 503
     except Exception as e:
         return jsonify({
             'status': 'error',
             'message': str(e),
-            'timestamp': datetime.now(pytz.utc).isoformat()
+            'timestamp': datetime.now().isoformat()
         }), 500
 
 @app.route('/set-language/<language>')
@@ -2681,12 +2634,10 @@ def asset_detail(id):
                     'employee_code': employee.employee_code,
                     'name': employee.name,
                     'department': employee.department,
-                    'department_jp': translate(employee.department, 'department', session.get('language', 'ja')) if employee.department else '',
                     'assignment_id': assignment.id
                 })
         
-        asset_type_jp = translate(asset.type, 'asset_type', session.get('language', 'ja'))
-        return render_template('asset_detail.html', asset=asset, asset_type_jp=asset_type_jp, employees=employees)
+        return render_template('asset_detail.html', asset=asset, employees=employees)
         
     except Exception as e:
         flash(str(e), 'error')
@@ -2763,31 +2714,12 @@ def export_assignment_history():
         # Write data
         for assignment, asset, employee in results:
             date = assignment.assigned_date or assignment.return_date
-            
-            # Get branch timezone for proper date formatting
-            branch_timezone = get_branch_timezone(asset.branch)
-            
-            # Convert to branch timezone if date has timezone info, otherwise assume it's in UTC
-            if date:
-                if date.tzinfo is None:
-                    # If no timezone info, assume UTC and convert to branch timezone
-                    from datetime import timezone
-                    utc_date = date.replace(tzinfo=timezone.utc)
-                    local_date = utc_date.astimezone(branch_timezone)
-                else:
-                    # If has timezone info, convert to branch timezone
-                    local_date = date.astimezone(branch_timezone)
-                
-                formatted_date = local_date.strftime('%Y-%m-%d')
-            else:
-                formatted_date = ''
-            
             type_ = '割当' if assignment.status == 'assigned' else '返却'
             status = '割当済み' if assignment.status == 'assigned' else '返却済み'
             notes = assignment.notes if assignment.status == 'assigned' else assignment.reclaim_reason
 
             writer.writerow([
-                formatted_date,
+                date.strftime('%Y-%m-%d') if date else '',
                 type_,
                 employee.employee_code,
                 employee.name,
@@ -2800,8 +2732,7 @@ def export_assignment_history():
             ])
 
         # Create response
-        branch_timezone = get_branch_timezone(session.get('branch', 'vietnam'))
-        timestamp = datetime.now(branch_timezone).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"asset_assignment_history_{session.get('branch')}_{timestamp}.csv"
         
         return Response(
@@ -2821,8 +2752,7 @@ def get_assignment_history_stats():
 
     try:
         branch = session.get('branch')
-        branch_timezone = get_branch_timezone(branch)
-        now = datetime.now(branch_timezone)
+        now = datetime.now()
         
         # Get date range from query params
         start_date = request.args.get('start_date')
@@ -3033,38 +2963,18 @@ def get_asset_assignment_logs():
         
         result = []
         for log, asset, employee in logs:
-            # Get branch timezone for proper date formatting
-            branch_timezone = get_branch_timezone(asset.branch)
-            
-            # Convert to branch timezone if log.date has timezone info, otherwise assume it's in UTC
-            if log.date:
-                if log.date.tzinfo is None:
-                    # If no timezone info, assume UTC and convert to branch timezone
-                    from datetime import timezone
-                    utc_date = log.date.replace(tzinfo=timezone.utc)
-                    local_date = utc_date.astimezone(branch_timezone)
-                else:
-                    # If has timezone info, convert to branch timezone
-                    local_date = log.date.astimezone(branch_timezone)
-                
-                formatted_date = local_date.strftime('%Y-%m-%d %H:%M')
-            else:
-                formatted_date = None
-            
             result.append({
                 'id': log.id,
                 'asset_id': log.asset_id,
                 'asset_code': asset.asset_code,
                 'asset_name': asset.name,
                 'asset_type': asset.type,
-                'asset_type_jp': translate(asset.type, 'asset_type', session.get('language', 'ja')),
                 'employee_id': log.employee_id,
                 'employee_code': employee.employee_code,
                 'employee_name': employee.name,
                 'employee_department': employee.department,
-                'employee_department_jp': translate(employee.department, 'department', session.get('language', 'ja')) if employee.department else '',
                 'action': log.action,
-                'date': formatted_date,
+                'date': log.date.strftime('%Y-%m-%d %H:%M') if log.date else None,
                 'notes': log.notes,
                 'reason': log.reason
             })

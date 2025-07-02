@@ -8,10 +8,8 @@ import os
 import sys
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from models import db, Employee, Asset, AssetAssignment, AssetRequest, AssetReturnRequest, AssetLog
+from models import db, Employee, Asset, AssetAssignment, AssetRequest, AssetReturnRequest, AssetAssignmentHistory
 from app import app
-from datetime import datetime
-import pytz
 
 def fix_orphaned_records():
     """Sửa các bản ghi orphaned trong database"""
@@ -139,62 +137,25 @@ def check_database_integrity():
         print(f"Error checking database integrity: {e}")
         return False
 
-def fix_assignment_datetime_timezone():
-    with app.app_context():
-        print("=== FIXING ASSIGNMENT DATETIME TIMEZONE ===")
-        assignments = AssetAssignment.query.all()
-        utc = pytz.utc
-        vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-        count = 0
-        for a in assignments:
-            for field in ['assigned_date', 'return_date', 'created_at', 'updated_at']:
-                dt = getattr(a, field)
-                if dt and dt.tzinfo is None:
-                    # Assume gốc là UTC, convert sang Asia/Ho_Chi_Minh
-                    dt_utc = utc.localize(dt)
-                    dt_vn = dt_utc.astimezone(vn_tz)
-                    setattr(a, field, dt_vn)
-                    count += 1
-        db.session.commit()
-        print(f"Đã cập nhật timezone cho {count} trường assignment.")
-
-def fix_assetlog_datetime_timezone():
-    with app.app_context():
-        print("=== FIXING ASSETLOG DATETIME TIMEZONE ===")
-        logs = AssetLog.query.all()
-        utc = pytz.utc
-        vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-        count = 0
-        for log in logs:
-            for field in ['date', 'created_at']:
-                dt = getattr(log, field)
-                if dt and dt.tzinfo is None:
-                    dt_utc = utc.localize(dt)
-                    dt_vn = dt_utc.astimezone(vn_tz)
-                    setattr(log, field, dt_vn)
-                    count += 1
-        db.session.commit()
-        print(f"Đã cập nhật timezone cho {count} trường assetlog.")
-
-def fix_available_quantity():
-    with app.app_context():
-        print("=== FIXING ASSET AVAILABLE QUANTITY ===")
-        from models import Asset, AssetAssignment
-        count = 0
-        for asset in Asset.query.all():
-            assigned_count = AssetAssignment.query.filter_by(asset_id=asset.id, status='assigned').count()
-            correct_available = asset.quantity - assigned_count
-            if asset.available_quantity != correct_available:
-                print(f"Asset {asset.asset_code}: available_quantity {asset.available_quantity} -> {correct_available}")
-                asset.available_quantity = correct_available
-                count += 1
-        db.session.commit()
-        print(f"Đã cập nhật lại available_quantity cho {count} tài sản.")
-
 if __name__ == "__main__":
-    fix_assignment_datetime_timezone()
-    fix_assetlog_datetime_timezone()
-    fix_available_quantity()
-    print("Hoàn thành cập nhật timezone và số lượng khả dụng cho dữ liệu cũ!")
+    print("Database Fix Script")
+    print("=" * 50)
+    
+    # Kiểm tra tính toàn vẹn trước
+    print("\n1. Checking database integrity...")
+    integrity_ok = check_database_integrity()
+    
+    if not integrity_ok:
+        print("\n2. Fixing orphaned records...")
+        if fix_orphaned_records():
+            print("\n3. Re-checking integrity...")
+            if check_database_integrity():
+                print("\n✅ Database has been successfully fixed!")
+            else:
+                print("\n❌ Database still has issues after fix!")
+        else:
+            print("\n❌ Failed to fix database!")
+    else:
+        print("\n✅ Database is already clean!")
     
     print("\nScript completed.") 

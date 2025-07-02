@@ -3,7 +3,6 @@ from flask import session
 from flask_wtf.csrf import generate_csrf
 import json
 import os
-import pytz
 
 def get_current_branch():
     """
@@ -17,11 +16,6 @@ def format_datetime(dt):
     """
     if not dt:
         return ""
-    tz = pytz.timezone('Asia/Ho_Chi_Minh')
-    if dt.tzinfo is None:
-        dt = tz.localize(dt)
-    else:
-        dt = dt.astimezone(tz)
     return dt.strftime("%d-%m-%Y %H:%M")
 
 def generate_csrf_token():
