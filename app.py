@@ -1647,6 +1647,16 @@ def approve_return_request(id):
         reclaim_reason = (getattr(return_request, 'reclaim_reason', None) or '').strip().lower()
         if reclaim_reason in ['not in use / idle', '未使用', 'chưa sử dụng', 'không sử dụng']:
             asset.status = 'Available'
+        # Ghi log lịch sử thu hồi vào AssetLog
+        history = AssetLog(
+            asset_id=asset_assignment.asset_id,
+            employee_id=asset_assignment.employee_id,
+            action='returned',
+            date=current_time,
+            notes=return_request.notes or '',
+            reason=getattr(return_request, 'reclaim_reason', None) or ''
+        )
+        db.session.add(history)
         db.session.commit()
         return jsonify({'success': True, 'message': '資産返却リクエストが承認されました'})
     except Exception as e:
