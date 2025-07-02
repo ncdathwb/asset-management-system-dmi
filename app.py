@@ -24,6 +24,14 @@ from functools import wraps
 import json
 import re
 
+VN_TZ = pytz.timezone('Asia/Ho_Chi_Minh')
+def to_vn_time(dt):
+    if not dt:
+        return None
+    if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+        dt = pytz.utc.localize(dt)
+    return dt.astimezone(VN_TZ)
+
 def retry_on_db_error(max_retries=3, delay=1):
     """Decorator để retry khi gặp lỗi kết nối database"""
     def decorator(func):
@@ -117,6 +125,14 @@ def get_branch_timezone(branch):
     # Default to UTC or a specific timezone if branch is not found
     return timezone_map.get(branch.lower(), pytz.utc)
 
+def to_branch_timezone(dt, branch):
+    tz = get_branch_timezone(branch)
+    if dt is None:
+        return None
+    if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+        dt = pytz.utc.localize(dt)
+    return dt.astimezone(tz)
+
 @app.context_processor
 def inject_csrf_token():
     return dict(csrf_token=generate_csrf())
@@ -159,7 +175,7 @@ def load_user(user_id):
 
 @app.context_processor
 def inject_current_year():
-    return {'current_year': datetime.now().year}
+    return {'current_year': datetime.now(get_branch_timezone(session.get('branch', 'vietnam'))).year}
 
 # Định nghĩa hàm translate_db_value trước khi dùng ở index
 def translate_db_value(value, field_type):
@@ -211,7 +227,7 @@ def index():
     if current_user.is_employee():
         return redirect(url_for('employee_asset_request'))
     filter = request.args.get('filter', 'today')
-    now = datetime.now()
+    now = datetime.now(get_branch_timezone(session.get('branch', 'vietnam')))
     if filter == 'today':
         start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
     elif filter == 'last7':
@@ -1279,10 +1295,10 @@ def get_asset_requests():
                 'employee_code': employee.employee_code,
                 'asset_name': asset.name if asset else req.asset_name,
                 'asset_code': asset.asset_code if asset else 'N/A',
-                'request_date': request_date.strftime('%d-%m-%Y') if request_date else '',
+                'request_date': to_vn_time(request_date).strftime('%d-%m-%Y %H:%M') if request_date else '',
                 'notes': req.notes,
                 'status': req.status,
-                'approval_date': approval_date.strftime('%d-%m-%Y') if approval_date else '',
+                'approval_date': to_vn_time(approval_date).strftime('%d-%m-%Y %H:%M') if approval_date else '',
                 'asset_available_quantity': asset.available_quantity if asset else 'N/A',
             })
         
@@ -1390,7 +1406,7 @@ def get_my_assets():
                 'name': asset.name,
                 'type': asset.type,
                 'status': asset.status,
-                'assigned_date': assignment.assigned_date.strftime('%d-%m-%Y %H:%M'),
+                'assigned_date': to_vn_time(assignment.assigned_date).strftime('%d-%m-%Y %H:%M'),
                 'has_pending_return': has_pending_return
             })
         
@@ -2234,8 +2250,8 @@ def get_assignment_history():
         result = []
         for log, asset, employee in logs:
             # Format ngày+giờ
-            date_time = log.date.strftime('%d-%m-%Y %H:%M') if log.date else ''
-            event_date = log.date.strftime('%d-%m-%Y') if log.date else ''
+            date_time = to_vn_time(log.date).strftime('%d-%m-%Y %H:%M') if log.date else ''
+            event_date = to_vn_time(log.date).strftime('%d-%m-%Y') if log.date else ''
             status = 'assigned' if log.action == 'assigned' else 'returned'
             reason = log.reason or ''
             notes = log.notes or ''
@@ -2295,7 +2311,7 @@ def assignment_history():
     return render_template('assignment_history.html')
 
 def get_start_date_from_filter(filter):
-    now = datetime.now()
+    now = datetime.now(get_branch_timezone(session.get('branch', 'vietnam')))
     if filter == 'week':
         # Start of the current week (Monday)
         start_date = now - timedelta(days=now.weekday())
@@ -2350,7 +2366,7 @@ def api_asset_flow():
     branch = session.get('branch')
     filter = request.args.get('filter', 'week') # Default filter to week
     start_date = get_start_date_from_filter(filter)
-    now = datetime.now()
+    now = datetime.now(get_branch_timezone(session.get('branch', 'vietnam')))
 
     date_periods = [] # Use a more general name for the list of date objects
     labels = []       # List for the labels displayed on the chart (strings)
