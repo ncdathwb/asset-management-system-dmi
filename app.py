@@ -24,6 +24,7 @@ from functools import wraps
 import json
 import re
 
+# Timezone
 VN_TZ = pytz.timezone('Asia/Ho_Chi_Minh')
 def to_vn_time(dt):
     if not dt:
