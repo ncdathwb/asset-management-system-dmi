@@ -543,7 +543,7 @@ function loadAssets(page = 1) {
                         <button class="btn btn-danger btn-sm" onclick="deleteAsset('${asset.id}')">
                             <i class="fas fa-trash"></i>
                         </button>
-                        <button class="btn btn-success btn-sm assign-asset-btn" data-asset-id="${asset.id}" data-asset-name="${asset.name}" ${displayStatus !== '利用可能' ? 'disabled' : ''}>
+                        <button class="btn btn-success btn-sm assign-asset-btn" data-asset-id="${asset.id}" data-asset-name="${asset.name}" ${(displayStatus !== '利用可能' || asset.available_quantity <= 0) ? 'disabled' : ''}>
                             <i class="fas fa-share-square"></i>
                         </button>
                     `));

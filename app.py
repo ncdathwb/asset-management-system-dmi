@@ -1628,25 +1628,34 @@ def approve_return_request(id):
         return_request.status = 'approved'
         return_request.approved_by = current_user.id
         return_request.approval_date = current_time.date()
-        # Tạo bản ghi mới cho lịch sử thu hồi (KHÔNG update assignment.status)
-        return_assignment = AssetAssignment(
-            asset_id=asset_assignment.asset_id,
-            employee_id=asset_assignment.employee_id,
-            assigned_date=asset_assignment.assigned_date,
-            return_date=current_time,
-            status='returned',
-            notes=asset_assignment.notes,
-            reclaim_reason=getattr(return_request, 'reclaim_reason', None) or '',
-            reclaim_notes=return_request.notes or '',
-            created_at=asset_assignment.created_at,
-            updated_at=current_time
-        )
-        db.session.add(return_assignment)
+        # Cập nhật assignment cũ về returned thay vì tạo assignment mới
+        asset_assignment.status = 'returned'
+        asset_assignment.return_date = current_time
+        asset_assignment.updated_at = current_time
+        asset_assignment.reclaim_reason = getattr(return_request, 'reclaim_reason', None) or ''
+        asset_assignment.reclaim_notes = return_request.notes or ''
         asset.available_quantity += 1
-        # Nếu lý do trả là 'Not in use / Idle' hoặc tương đương thì chuyển trạng thái asset về 'Available'
-        reclaim_reason = (getattr(return_request, 'reclaim_reason', None) or '').strip().lower()
+        # Lấy lý do trả tài sản từ trường return_reason (ưu tiên), nếu không có thì fallback sang reclaim_reason hoặc parse từ notes
+        reclaim_reason = (getattr(return_request, 'return_reason', None) or getattr(return_request, 'reclaim_reason', None) or '').strip().lower()
+        if not reclaim_reason and return_request.notes:
+            import re
+            m = re.match(r'返却理由: ?(.*?) ?- ?メモ: ?(.*)', return_request.notes)
+            if m:
+                reclaim_reason = m.group(1).strip().lower()
+            else:
+                m2 = re.match(r'返却理由: ?(.*)', return_request.notes)
+                if m2:
+                    reclaim_reason = m2.group(1).strip().lower()
+        print(f"[DEBUG] reclaim_reason nhận được: '{reclaim_reason}'")
         if reclaim_reason in ['not in use / idle', '未使用', 'chưa sử dụng', 'không sử dụng']:
             asset.status = 'Available'
+        elif reclaim_reason in ['damaged', '故障', 'hỏng']:
+            asset.status = 'Damaged'
+        elif reclaim_reason in ['under maintenance', 'メンテナンス中', 'bảo trì']:
+            asset.status = 'Under maintenance'
+        elif reclaim_reason in ['lost', '紛失', 'mất']:
+            asset.status = 'Lost'
+        # else: giữ nguyên trạng thái hiện tại hoặc xử lý thêm nếu cần
         # Ghi log lịch sử thu hồi vào AssetLog
         history = AssetLog(
             asset_id=asset_assignment.asset_id,

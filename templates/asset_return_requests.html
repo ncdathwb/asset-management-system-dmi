@@ -509,6 +509,13 @@ $(document).on('click', '.approve-btn', function() {
                 loadRequests(activeStatus, currentPage[activeStatus], itemsPerPage);
                 loadRequests('approved', 1, itemsPerPage);
             }
+            // Nếu đang mở trang /assets, gọi loadAssets() nếu có
+            if (window.loadAssets) {
+                window.loadAssets();
+            } else {
+                // Nếu không, gửi sự kiện để các tab khác reload
+                window.localStorage.setItem('reloadAssets', Date.now());
+            }
         } else {
             showNotification(data.message || 'Failed to approve request', 'danger');
             $(this).prop('disabled', false).html('<i class="fas fa-check"></i> 承認');
@@ -590,5 +597,16 @@ function translateNotification(message) {
     if (message.includes('rejected')) return '資産返還リクエストが拒否されました';
     return message;
 }
+
+// Ở trang /assets, lắng nghe sự kiện reloadAssets để tự động gọi loadAssets()
+window.addEventListener('storage', function(e) {
+    if (e.key === 'reloadAssets') {
+        if (window.loadAssets) {
+            window.loadAssets();
+        } else {
+            location.reload();
+        }
+    }
+});
 </script>
 {% endblock %}
